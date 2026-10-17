@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { collectiveStop, defaults, episode, learningDefaults, qUpdate, Simulation, type Config, type QTable } from './engine.ts';
+import { collectiveStop, decisionStep, defaults, episode, greedy, learningDefaults, qUpdate, Simulation, type Config, type QTable } from './engine.ts';
 
 const config = (patch: Partial<Config> = {}): Config => ({ ...defaults, enabled: [...defaults.enabled], ...patch });
 
@@ -121,6 +121,54 @@ test('training changes the policy table and evaluation does not mutate it', () =
   const before = structuredClone(q);
   const result = episode(config(), 910001, q);
   assert.deepEqual(q, before); assert.ok(Number.isFinite(result.score));
+});
+
+test('a routing choice receives travel and door rewards with duration-correct discounting', () => {
+  const sim = new Simulation(config());
+  const reference = new Simulation(config());
+  const transition = decisionStep(sim, 0, 0.9, false);
+  // 35 floors / 1.5 floors per tick, rounded up, plus 4 door ticks.
+  assert.equal(transition.elapsed, 28);
+  assert.equal(sim.readyForDecision(), true);
+  let reward = 0;
+  for (let t = 0; t < 28; t++) reward += 0.9 ** t * reference.step(0, false);
+  assert.ok(Math.abs(transition.reward - reward) < 1e-9);
+  assert.deepEqual(sim.metrics(), reference.metrics());
+  const q: QTable = { next: [2, 3, 4, 5] };
+  qUpdate(q, 'now', 0, reward, 'next', false, { alpha: 1, gamma: 0.9, epsilon: 0 }, 28);
+  assert.ok(Math.abs(q.now[0] - (reward + 0.9 ** 28 * 5)) < 1e-9);
+});
+
+test('decision intervals stop at another car becoming ready and at the episode horizon', () => {
+  const sim = new Simulation(config({ enabled: [true, true, false] }));
+  sim.cars[1].door = 2;
+  assert.equal(decisionStep(sim, 0, 1, false).elapsed, 2);
+  sim.time = 359; sim.cars[1].door = 20;
+  assert.equal(decisionStep(sim, 0, 1, false).elapsed, 1);
+  assert.equal(sim.time, 360);
+});
+
+test('state separates ready-car heading, location, and episode phase', () => {
+  const sim = new Simulation(config());
+  const initial = sim.stateKey();
+  sim.cars[0].direction *= -1; assert.notEqual(sim.stateKey(), initial);
+  sim.cars[0].direction *= -1; sim.cars[0].position = 40;
+  assert.notEqual(sim.stateKey(), initial);
+  sim.cars[0].position = 30; sim.time = 120;
+  assert.notEqual(sim.stateKey(), initial);
+});
+
+test('decision-interval evaluation matches one-second live playback for one and five cars', () => {
+  for (const cars of [1, 5]) {
+    const c = config({ cars, enabled: [true, true, true, true, true] });
+    const q: QTable = {};
+    for (let i = 0; i < 30; i++) episode(c, 42 + i, q, learningDefaults);
+    const live = new Simulation(c, 910001);
+    for (let t = 0; t < 360; t++) live.step(greedy(q, live.stateKey()));
+    const { decisions, ...evaluated } = episode(c, 910001, q);
+    assert.deepEqual(evaluated, live.metrics());
+    assert.ok(decisions > 0 && decisions < 360);
+  }
 });
 
 test('rejects configurations with no active cars and invalid floor bounds', () => {

@@ -79,6 +79,7 @@ export class Simulation {
     this.addPassenger(from, to, at);
   }
   waiting() { return this.people.filter(p => p.boarded === null); }
+  readyForDecision() { return this.cars.some(c => c.enabled && c.target === null && c.door === 0); }
   stateKey() {
     const waiting = this.waiting();
     const calls = new Set(waiting.map(p => `${p.from}:${Math.sign(p.to - p.from)}`)).size;
@@ -87,7 +88,10 @@ export class Simulation {
     const load = cars.reduce((n, c) => n + c.passengers.length, 0) / (cars.length * this.config.capacity);
     const lobby = waiting.some(p => p.from <= 0);
     const high = cars.reduce((n, c) => n + c.position, 0) / cars.length > this.config.floors / 2;
-    return [Math.min(3, Math.floor(calls / 3)), Math.min(3, Math.floor(oldest / 30)), Math.min(2, Math.floor(load * 3)), Number(lobby), Number(high), cars.length].join(':');
+    const ready = cars.find(c => c.target === null && c.door === 0);
+    return [Math.min(3, Math.floor(calls / 3)), Math.min(3, Math.floor(oldest / 30)), Math.min(2, Math.floor(load * 3)), Number(lobby), Number(high), cars.length,
+      ready?.direction ?? 0, ready ? Math.floor((ready.position + 5) / 10) : -1,
+      Math.min(2, Math.floor(this.time / 120))].join(':');
   }
   private chooseStop(car: Car, action: number, claimed: Set<string>) {
     const onboard = car.passengers.map(id => this.people[id]);
@@ -177,23 +181,35 @@ export class Simulation {
 
 export type QTable = Record<string, number[]>;
 export interface Learning { alpha: number; epsilon: number; gamma: number }
-export const learningDefaults: Learning = { alpha: 0.12, epsilon: 0.2, gamma: 0.95 };
+export const learningDefaults: Learning = { alpha: 0.12, epsilon: 0.2, gamma: 0.99 };
 export function greedy(q: QTable, key: string) {
   const row = q[key]; if (!row) return 0;
   return row.indexOf(Math.max(...row));
 }
-export function qUpdate(q: QTable, key: string, action: number, reward: number, next: string, terminal: boolean, learning: Learning) {
+export function qUpdate(q: QTable, key: string, action: number, reward: number, next: string, terminal: boolean, learning: Learning, elapsed = 1) {
   const row = q[key] ?? (q[key] = [0, 0, 0, 0]);
   const future = terminal ? 0 : Math.max(...(q[next] ?? [0, 0, 0, 0]));
-  row[action] += learning.alpha * (reward + learning.gamma * future - row[action]);
+  row[action] += learning.alpha * (reward + learning.gamma ** elapsed * future - row[action]);
+}
+// Credit a strategy for the entire interval until a car can choose another stop.
+// Rewards and the bootstrap use the same per-second discount (semi-Markov Q-learning).
+export function decisionStep(sim: Simulation, action: number, gamma: number, arrivals = true) {
+  let reward = 0, elapsed = 0;
+  do {
+    reward += gamma ** elapsed * sim.step(action, arrivals);
+    elapsed++;
+  } while (sim.time < EPISODE_SECONDS && !sim.readyForDecision());
+  return { reward, elapsed };
 }
 export function episode(config: Config, seed: number, q?: QTable, learning?: Learning, rng = random(seed + 100000)) {
   const sim = new Simulation(config, seed);
-  for (let t = 0; t < EPISODE_SECONDS; t++) {
+  let decisions = 0;
+  while (sim.time < EPISODE_SECONDS) {
     const key = sim.stateKey();
     const action = q ? (learning && rng() < learning.epsilon ? Math.floor(rng() * 4) : greedy(q, key)) : 0;
-    const reward = sim.step(action);
-    if (q && learning) qUpdate(q, key, action, reward, sim.stateKey(), t === EPISODE_SECONDS - 1, learning);
+    const { reward, elapsed } = decisionStep(sim, action, learning?.gamma ?? 1);
+    decisions++;
+    if (q && learning) qUpdate(q, key, action, reward, sim.stateKey(), sim.time === EPISODE_SECONDS, learning, elapsed);
   }
-  return sim.metrics();
+  return { ...sim.metrics(), decisions };
 }

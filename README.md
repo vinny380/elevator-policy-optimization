@@ -19,7 +19,7 @@ Open the localhost URL printed by Vite. `npm test` checks engine invariants and 
 - Three.js cutaway with passenger queues, animated cars and doors, orbit/zoom controls, passenger inspection, pause/reset/playback speed, and live metrics.
 - Seeded night, morning, evening, and inter-floor traffic; adjustable capacity, speed, door dwell, and arrival rate.
 - An explicitly labeled selective collective (LOOK) reference and tabular Q-learning that selects among collective, nearest-stop, oldest-call, and balanced strategies. Each car uses the chosen strategy when it needs its next stop.
-- Background-worker training; adjustable learning rate, exploration, and discount; actual episode/decision counts; fixed-seed evaluation; replayable checkpoints.
+- Background-worker training; adjustable learning rate, exploration, and discount; actual episode/policy-choice counts; fixed-seed evaluation; replayable checkpoints.
 
 ## Conventional vs. RL vs. PDDL
 
@@ -37,11 +37,11 @@ The model minimizes estimated travel ticks plus door dwell across at most six cu
 
 This is **classical action-cost PDDL**, not a durative-action or full multi-car passenger model. Optimality applies only to a solved bounded stop snapshot's travel/dwell objective; it does not imply globally optimal waiting time. A temporal model with explicit capacity and passenger transitions remains tracked in #3. No planner service, Python runtime, or extra runtime dependency is needed by the site.
 
-Configuration changes create a new experiment and reset training. Learning-parameter changes pause training and apply when resumed. Checkpoints are kept in memory for this tab (latest 100); reload discards them. Choosing a checkpoint restarts visual playback with the configured seed. The original scenario recreates the **starting conditions**, not the unknown building controller or observed skipped-pickup route.
+Configuration changes create a new experiment and reset training. Learning-parameter changes pause training and apply when resumed. Checkpoints are kept in memory for this tab (latest 100 plus the best-ever evaluation checkpoint); reload discards them. The chart labels the latest evaluation separately from the best saved score and LOOK baseline. Replay best works even after that checkpoint leaves the rolling chart. Restart from scratch clears training and replay while retaining settings. Choosing a checkpoint restarts visual playback with the configured seed. The original scenario recreates the **starting conditions**, not the unknown building controller or observed skipped-pickup route.
 
 ## Model and reward
 
-At each one-second step, the learner observes discretized active-call count, oldest call age, fleet load, lobby-call presence, average car height, and active fleet size. It chooses a routing strategy, not arbitrary motor commands. Hall calls expose floor/direction; destinations become available to routing after boarding. Training rewards can use full simulated passenger outcomes.
+When at least one car is ready to choose a stop, the learner observes discretized active-call count, oldest call age, fleet load, lobby-call presence, average car height, active fleet size, first ready car’s floor and direction, and episode phase. It chooses a routing strategy, not arbitrary motor commands. Hall calls expose floor/direction; destinations become available to routing after boarding. Training rewards can use full simulated passenger outcomes.
 
 The accumulated cost is the discrete increment of:
 
@@ -52,11 +52,11 @@ sum over all passengers:
   + rideWeight * ridingSeconds / 60
 ```
 
-The learner receives negative cost increments. The chart reports negative accumulated cost per generated passenger (higher/closer to zero is better). Every episode lasts 360 simulated seconds. Unserved passengers accrue waiting cost through the horizon; their eventual future waits are not predicted. Mean and P95 wait include current waits for passengers not yet boarded. Throughput is displayed separately.
+The learner uses a semi-Markov Q update: accumulate `sum(gamma^t * reward_t)` until the next car becomes ready, then bootstrap with `gamma^elapsed * max Q(next)`. Moving and door-only ticks do not select or update unrelated strategies. Policy-choice counts include idle opportunities when a ready car has no requests. The default per-second discount is 0.99 (about 74% weight after 30 seconds); a discount of 1 optimizes the undiscounted finite episode. The chart reports negative accumulated cost per generated passenger (higher/closer to zero is better). Every episode lasts 360 simulated seconds. Unserved passengers accrue waiting cost through the horizon; their eventual future waits are not predicted. Mean and P95 wait include current waits for passengers not yet boarded. Throughput is displayed separately.
 
 The environment uses constant travel speed, fixed door dwell, and one-second updates. Animation interpolates position. It does not model acceleration, jerk, boarding duration, emergency behavior, or mid-flight insertion of new stops. It is an educational model, not calibrated real-building telemetry or an optimality claim.
 
-Training seeds vary. Evaluation uses seeds 910001–910004, with exploration disabled. The collective baseline uses those exact streams, configuration, objective, and horizon. User-selected visual replay has its own seed. Held-out evaluation is diagnostic, not a guarantee of generalization; policy scores may regress. Compare hardware configurations in separate experiments.
+Training seeds vary. Evaluation uses seeds 910001–910004, with exploration disabled. The collective baseline uses those exact streams, configuration, objective, and horizon. User-selected visual replay has its own seed. Fixed-seed evaluation is used for checkpoint selection, not a guarantee of generalization; policy scores may regress. State bins still alias distinct situations, and a constant learning rate and exploration rate do not guarantee convergence. A flat score alone does not establish a local optimum. Compare hardware configurations in separate experiments.
 
 ## Project tracking
 
@@ -69,6 +69,7 @@ Full temporal PDDL, manual dispatch, counterfactual explanations, persistent bra
 
 ## References
 
+- [Sutton, Precup, and Singh: temporal abstraction and semi-Markov Q-learning](https://people.cs.umass.edu/~barto/courses/cs687/Sutton-Precup-Singh-AIJ99.pdf)
 - [Crites and Barto: Improving Elevator Performance Using Reinforcement Learning](https://papers.neurips.cc/paper/1073-improving-elevator-performance-using-reinforcement-learning.pdf)
 - [Fox and Long: PDDL 2.1](https://www.cs.cmu.edu/afs/cs/project/jair/pub/volume20/fox03a-html/JAIRpddl.html)
 - [IPC 2008: action-cost PDDL specification](https://ipc08.icaps-conference.org/deterministic/PddlActionCosts.html)

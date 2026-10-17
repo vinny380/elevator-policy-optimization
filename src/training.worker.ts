@@ -2,12 +2,13 @@ import { episode, EPISODE_SECONDS, random, type Config, type Learning, type QTab
 
 export interface Point { episode: number; training: number; evaluation: number; baseline: number; wait: number; delivered: number }
 export interface Checkpoint { episode: number; score: number; q: QTable }
-export type TrainingMessage = { type: 'progress'; episodes: number; steps: number; states: number; seconds: number; point: Point; checkpoint: Checkpoint } | { type: 'error'; message: string };
+export type TrainingMessage = { type: 'progress'; episodes: number; steps: number; decisions: number; states: number; seconds: number; point: Point; checkpoint: Checkpoint } | { type: 'error'; message: string };
 let running = false;
 let config: Config;
 let learning: Learning;
 let q: QTable = {};
 let episodes = 0;
+let decisions = 0;
 let start = 0;
 let baseline = 0;
 let generation = 0;
@@ -22,11 +23,12 @@ function batch(id: number) {
     let score = 0;
     for (let i = 0; i < 20; i++) {
       const seed = config.seed + episodes + 1;
-      score += episode(config, seed, q, learning, random(seed + 77231)).score;
+      const result = episode(config, seed, q, learning, random(seed + 77231));
+      score += result.score; decisions += result.decisions;
       episodes++;
     }
     const evaluation = evaluate();
-    const message: TrainingMessage = { type: 'progress', episodes, steps: episodes * EPISODE_SECONDS, states: Object.keys(q).length,
+    const message: TrainingMessage = { type: 'progress', episodes, steps: episodes * EPISODE_SECONDS, decisions, states: Object.keys(q).length,
       seconds: (performance.now() - start) / 1000,
       point: { episode: episodes, training: score / 20, evaluation: evaluation.score, baseline, wait: evaluation.wait, delivered: evaluation.delivered },
       checkpoint: { episode: episodes, score: evaluation.score, q } };
@@ -38,7 +40,7 @@ self.onmessage = (event: MessageEvent<{ type: string; config: Config; learning: 
   const data = event.data;
   if (data.type === 'pause') { running = false; generation++; return; }
   if (data.type === 'start') {
-    running = false; generation++; config = data.config; learning = data.learning; q = {}; episodes = 0; start = performance.now();
+    running = false; generation++; config = data.config; learning = data.learning; q = {}; episodes = 0; decisions = 0; start = performance.now();
     baseline = evaluationSeeds.reduce((n, seed) => n + episode(config, seed).score, 0) / evaluationSeeds.length;
   } else if (data.type === 'resume') { learning = data.learning; }
   running = true; const id = ++generation; batch(id);
