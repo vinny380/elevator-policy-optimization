@@ -18,8 +18,24 @@ Open the localhost URL printed by Vite. `npm test` checks engine invariants and 
 - 10–40 above-ground floors, G, and P1–P5; 1–5 elevators with individual service toggles. Default: 40 floors, three cars, two offline.
 - Three.js cutaway with passenger queues, animated cars and doors, orbit/zoom controls, passenger inspection, pause/reset/playback speed, and live metrics.
 - Seeded night, morning, evening, and inter-floor traffic; adjustable capacity, speed, door dwell, and arrival rate.
-- A collective routing baseline and tabular Q-learning that selects among collective, nearest-stop, oldest-call, and balanced strategies. Each car uses the chosen strategy when it needs its next stop.
+- An explicitly labeled selective collective (LOOK) reference and tabular Q-learning that selects among collective, nearest-stop, oldest-call, and balanced strategies. Each car uses the chosen strategy when it needs its next stop.
 - Background-worker training; adjustable learning rate, exploration, and discount; actual episode/decision counts; fixed-seed evaluation; replayable checkpoints.
+
+## Conventional vs. RL vs. PDDL
+
+The comparison table runs each available controller on the same four six-minute traffic streams. Its test seeds (-810001 through -810004) are separate from training and checkpoint selection. It shows mean wait, mean per-run P95, frustration per passenger, completed trips, and unserved passengers. Relative changes are signed; worse results are not hidden. Four seeds are a small diagnostic comparison, not a significance claim. A selected RL checkpoint is frozen with exploration disabled for this comparison. The comparison worker is terminated when the configuration or checkpoint changes, preventing stale results from being displayed.
+
+Use **Conventional / LOOK**, **Learned / RL**, or **Planner / PDDL** above the tower to watch each controller. The comparison's Watch buttons replay the environment seed, not the four aggregated test seeds. Select an RL checkpoint to add it to the comparison.
+
+Selective collective control serves matching-direction calls while sweeping the building. This LOOK implementation reverses at outstanding requests rather than empty end floors, and uses the farthest opposite-direction hall call as a turning point. Cars share call assignments. It is a simplified implementation of a conventional algorithm family, not proprietary manufacturer firmware.
+
+### The actual PDDL path
+
+`src/pddl.ts` generates and parses a grounded STRIPS domain/problem with constant action costs, searches it using bounded uniform-cost search, validates the resulting plan against preconditions/effects/goals, and returns its first stop to the simulator. The PDDL panel shows the live action sequence and provides domain, problem, and plan downloads. Unsupported syntax is rejected. Search is capped at 1,500 expanded states, with an explicit LOOK fallback if no plan is found within the cap.
+
+The model minimizes estimated travel ticks plus door dwell across at most six currently legal stop candidates per car, prioritizing onboard destinations then old hall calls. It uses only current information; waiting passengers expose origin and direction, not their destination. Capacity and actual boarding remain enforced by the shared simulator. After the first stop, it generates a fresh snapshot at the next decision, incorporating new calls and revealed destinations. The rest of the plan is an ordering of visits, not a guaranteed future passenger-service schedule.
+
+This is **classical action-cost PDDL**, not a durative-action or full multi-car passenger model. Optimality applies only to a solved bounded stop snapshot's travel/dwell objective; it does not imply globally optimal waiting time. A temporal model with explicit capacity and passenger transitions remains tracked in #3. No planner service, Python runtime, or extra runtime dependency is needed by the site.
 
 Configuration changes create a new experiment and reset training. Learning-parameter changes pause training and apply when resumed. Checkpoints are kept in memory for this tab (latest 100); reload discards them. Choosing a checkpoint restarts visual playback with the configured seed. The original scenario recreates the **starting conditions**, not the unknown building controller or observed skipped-pickup route.
 
@@ -49,11 +65,13 @@ Training seeds vary. Evaluation uses seeds 910001–910004, with exploration dis
 - [#3 — Temporal PDDL planner](https://github.com/vinny380/elevator-policy-optimization/issues/3)
 - [#4 — Counterfactuals, branching, and sharing](https://github.com/vinny380/elevator-policy-optimization/issues/4)
 
-PDDL integration, manual dispatch, counterfactual explanations, persistent branching/sharing, and observed-route reconstruction are planned, not implemented. The first two issues track the implementation in this workspace until reviewed and merged.
+Full temporal PDDL, manual dispatch, counterfactual explanations, persistent branching/sharing, and observed-route reconstruction remain planned. The runnable classical PDDL controller and three-way comparison are included in draft PR #5.
 
 ## References
 
 - [Crites and Barto: Improving Elevator Performance Using Reinforcement Learning](https://papers.neurips.cc/paper/1073-improving-elevator-performance-using-reinforcement-learning.pdf)
 - [Fox and Long: PDDL 2.1](https://www.cs.cmu.edu/afs/cs/project/jair/pub/volume20/fox03a-html/JAIRpddl.html)
+- [IPC 2008: action-cost PDDL specification](https://ipc08.icaps-conference.org/deterministic/PddlActionCosts.html)
+- [Mitsubishi: selective collective control as a standard controller option](https://www.mitsubishielectric.com/elevator/products/basic/elevators/nexway_s_ip_ap_v2/pdf/product_guide.pdf)
 
 The learner here is a compact educational implementation; it is not a reproduction of the cited research system.

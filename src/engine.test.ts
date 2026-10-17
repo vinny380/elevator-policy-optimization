@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { defaults, episode, learningDefaults, qUpdate, Simulation, type Config, type QTable } from './engine.ts';
+import { collectiveStop, defaults, episode, learningDefaults, qUpdate, Simulation, type Config, type QTable } from './engine.ts';
 
 const config = (patch: Partial<Config> = {}): Config => ({ ...defaults, enabled: [...defaults.enabled], ...patch });
 
@@ -39,8 +39,8 @@ test('collective control eventually delivers a closed workload for fleets of one
   }
 });
 
-test('capacity, floor bounds, passenger conservation, and outages hold under all strategies', () => {
-  for (let action = 0; action < 4; action++) {
+test('capacity, floor bounds, passenger conservation, and outages hold under all strategies including PDDL', () => {
+  for (let action = 0; action <= 4; action++) {
     const sim = new Simulation(config({ cars: 5, enabled: [true, false, true, false, true], capacity: 2, pattern: 'mixed', demand: 30 }));
     for (let i = 0; i < 700; i++) {
       sim.step(action);
@@ -58,6 +58,25 @@ test('capacity, floor bounds, passenger conservation, and outages hold under all
       }
     }
   }
+});
+
+test('LOOK sweeps matching calls and turns at the farthest opposite-direction call', () => {
+  const call = (floor: number, direction: number) => ({ floor, direction, inside: false, age: 0 });
+  assert.equal(collectiveStop(0, 1, [call(10, -1), call(30, -1)])?.floor, 30);
+  assert.equal(collectiveStop(0, 1, [call(10, 1), call(30, -1)])?.floor, 10);
+  assert.equal(collectiveStop(30, -1, [call(10, -1), call(20, -1)])?.floor, 20);
+  assert.equal(collectiveStop(20, 1, [call(10, -1), call(5, -1)])?.floor, 10);
+});
+
+test('LOOK does not reverse at a drop-off while there is still demand ahead', () => {
+  const sim = new Simulation(config({ pattern: 'mixed' }));
+  const rider = sim.addPassenger(0, 10); rider.boarded = 0; rider.car = 0;
+  sim.cars[0].passengers.push(rider.id);
+  const downCall = sim.addPassenger(10, 0); sim.addPassenger(30, 40);
+  for (let t = 0; t < 7; t++) sim.step(0, false);
+  assert.equal(rider.delivered, 7);
+  assert.equal(downCall.boarded, null);
+  assert.equal(sim.cars[0].direction, 1);
 });
 
 test('squared waiting penalty accrues even for a passenger not yet served', () => {

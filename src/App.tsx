@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Building } from './Building';
 import { Chart } from './Chart';
-import { defaults, floorLabel, greedy, learningDefaults, Simulation, type Config, type Learning, type QTable, type Pattern } from './engine';
+import { ComparisonPanel } from './ComparisonPanel';
+import { PddlInspector } from './PddlInspector';
+import { controllerAction, type Controller } from './comparison';
+import { defaults, floorLabel, learningDefaults, Simulation, type Config, type Learning, type QTable, type Pattern } from './engine';
 import type { Checkpoint, Point, TrainingMessage } from './training.worker';
 
 const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 0 });
@@ -17,7 +20,7 @@ export function App() {
   const [, setTick] = useState(0);
   const [paused, setPaused] = useState(false);
   const [speed, setSpeed] = useState(4);
-  const [controller, setController] = useState<'collective' | 'learned'>('collective');
+  const [controller, setController] = useState<Controller>('collective');
   const [learning, setLearning] = useState<Learning>(learningDefaults);
   const [running, setRunning] = useState(false);
   const [points, setPoints] = useState<Point[]>([]);
@@ -56,7 +59,7 @@ export function App() {
       const dt = Math.min(0.25, (now - last) / 1000); last = now;
       if (!paused) {
         accumulated += dt * speed;
-        while (accumulated >= 1) { sim.step(controller === 'learned' ? greedy(qRef.current, sim.stateKey()) : 0); accumulated--; }
+        while (accumulated >= 1) { sim.step(controllerAction(sim, controller, qRef.current)); accumulated--; }
         if (now - rendered > 100) { setTick(t => t + 1); rendered = now; }
       }
       frame = requestAnimationFrame(animate);
@@ -75,7 +78,7 @@ export function App() {
     if (!enabled.slice(0, config.cars).some(Boolean)) { setNotice('Keep one car in service so passengers can reach their destinations.'); return; }
     change({ enabled });
   }
-  function replay(which = controller) { setSim(new Simulation(config)); setController(which); setPaused(false); setNotice(`Replaying seed ${config.seed} with ${which === 'learned' ? `checkpoint ${qVersion}` : 'collective control'}.`); }
+  function replay(which: Controller = controller) { setSim(new Simulation(config)); setController(which); setPaused(false); setNotice(`Replaying seed ${config.seed} with ${which === 'learned' ? `checkpoint ${qVersion}` : which === 'pddl' ? 'PDDL stop planning' : 'selective collective (LOOK)'}.`); }
   function chooseCheckpoint(episode: number) {
     const checkpoint = checkpoints.find(c => c.episode === episode); if (!checkpoint) return;
     qRef.current = checkpoint.q; setSelectedCheckpoint(episode); setQVersion(episode);
@@ -104,6 +107,7 @@ export function App() {
     </header>
     <main>
       <div className="page-title"><div><p className="eyebrow">AN EXPERIMENT IN MOVING PEOPLE</p><h1>Every floor. A better decision.</h1><p>Build the conditions. Change the incentives. Watch a policy learn.</p></div><div className="experiment-id"><span>EXPERIMENT</span><strong>{String(experiment).padStart(3, '0')}</strong><small>SEED {config.seed}</small></div></div>
+      <ComparisonPanel config={config} q={qVersion === null ? null : qRef.current} checkpoint={qVersion} onWatch={which => { replay(which); document.getElementById('simulation')?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); }} />
       <div className="workspace">
         <aside className="left-panel">
           <div className="panel-top"><span>ENVIRONMENT</span><span className="small-icon">⌘</span></div>
@@ -126,15 +130,16 @@ export function App() {
         </aside>
         <section className="simulation-panel" id="simulation" aria-label="Live elevator simulation">
           <div className="scene-header"><div><span className="live-dot" /> LIVE SIMULATION <span className="scene-clock">{clock}</span></div><span className={active < config.cars ? 'service-badge degraded' : 'service-badge'}>{active} / {config.cars} IN SERVICE</span></div>
-          <div className="scene-controller"><button className={controller === 'collective' ? 'active' : ''} onClick={() => replay('collective')}>Collective control</button><button disabled={!checkpoints.length} className={controller === 'learned' ? 'active' : ''} onClick={() => { if (best) chooseCheckpoint(best.episode); }}>Learned policy <span>RL</span></button></div>
+          <div className="scene-controller"><button aria-pressed={controller === 'collective'} className={controller === 'collective' ? 'active' : ''} onClick={() => replay('collective')}>Conventional <span>LOOK</span></button><button disabled={!checkpoints.length} aria-pressed={controller === 'learned'} className={controller === 'learned' ? 'active' : ''} onClick={() => { if (best) chooseCheckpoint(best.episode); }}>Learned <span>RL</span></button><button aria-pressed={controller === 'pddl'} className={controller === 'pddl' ? 'active' : ''} onClick={() => replay('pddl')}>Planner <span>PDDL</span></button></div>
           <Building simulation={sim} onSelect={setSelectedPerson} />
           <div className="scene-caption"><span>{config.floors} FLOORS IS A LONG WAY TO WAIT.</span><p>{config.floors} above ground · 5 below · {config.capacity} people per car</p></div>
           <div className="scene-legend"><span><i className="legend-calm" /> Waiting</span><span><i className="legend-angry" /> Long wait</span><span className="drag-hint">Drag to orbit · scroll to zoom</span></div>
-          <div className="scene-bottom"><div className="playback"><button aria-label={paused ? 'Play simulation' : 'Pause simulation'} className="play-button" onClick={() => setPaused(p => !p)}>{paused ? '▶' : 'Ⅱ'}</button><button aria-label="Reset simulation" onClick={() => replay()}>↺</button><div className="speed-picker" role="group" aria-label="Simulation playback speed">{[1, 4, 16].map(n => <button key={n} className={speed === n ? 'active' : ''} aria-pressed={speed === n} onClick={() => setSpeed(n)}>{n}×</button>)}</div><span className="playback-label">{controller === 'learned' ? `CHECKPOINT ${qVersion}` : 'BASELINE POLICY'}</span></div>
+          <div className="scene-bottom"><div className="playback"><button aria-label={paused ? 'Play simulation' : 'Pause simulation'} className="play-button" onClick={() => setPaused(p => !p)}>{paused ? '▶' : 'Ⅱ'}</button><button aria-label="Reset simulation" onClick={() => replay()}>↺</button><div className="speed-picker" role="group" aria-label="Simulation playback speed">{[1, 4, 16].map(n => <button key={n} className={speed === n ? 'active' : ''} aria-pressed={speed === n} onClick={() => setSpeed(n)}>{n}×</button>)}</div><span className="playback-label">{controller === 'learned' ? `CHECKPOINT ${qVersion}` : controller === 'pddl' ? 'PDDL PLANNER' : 'CONVENTIONAL LOOK'}</span></div>
           <div className="metrics"><div><span>Waiting now</span><strong>{metrics.waiting}<small>people</small></strong></div><div><span>Mean wait*</span><strong>{Math.round(metrics.meanWait)}<small>sec</small></strong></div><div><span>95th percentile*</span><strong>{Math.round(metrics.p95)}<small>sec</small></strong></div><div><span>Delivered</span><strong>{metrics.delivered}<small>people</small></strong></div></div></div>
         </section>
         <aside className="right-panel" id="learning">
-          <div className="panel-top"><span>THE LEARNING LAB</span><span className="beta-tag">Q-LEARNING</span></div>
+          <div className="panel-top"><span>{controller === 'pddl' ? 'THE PLANNING LAB' : 'THE LEARNING LAB'}</span><span className="beta-tag">{controller === 'pddl' ? 'PDDL / STRIPS' : 'Q-LEARNING'}</span></div>
+          {controller === 'pddl' ? <><PddlInspector plan={sim.lastPlan} fallbacks={sim.plannerFallbacks} /><div className="pddl-return"><p>{running ? `RL training continues in the background · ${fmt(stats.episodes)} episodes.` : 'The planner works immediately. It does not need training.'}</p>{running && <button onClick={train}>Pause RL training</button>}<button onClick={() => replay('collective')}>Back to learning controls →</button></div></> : <>
           <div className="training-intro"><h2>Better is learned.</h2><p>One episode. Hundreds of decisions.<br />A little less waiting, if the policy improves.</p></div>
           <div className="chart-heading"><span>POLICY REWARD <span className="muted">↑ BETTER</span></span><strong>{latest ? latest.evaluation.toFixed(2) : '—'}</strong></div>
           <Chart points={points} selected={selectedCheckpoint} onSelect={chooseCheckpoint} />
@@ -150,6 +155,7 @@ export function App() {
           </Section>
           <details className="learning-settings"><summary>Learning parameters <span>+</span></summary><Range label="Exploration (ε)" value={learning.epsilon} min={0} max={1} step={0.05} onChange={epsilon => changeLearning({ epsilon })} hint="Chance of trying a different strategy." /><Range label="Learning rate (α)" value={learning.alpha} min={0.01} max={1} step={0.01} onChange={alpha => changeLearning({ alpha })} hint="How strongly new outcomes update the policy." /><Range label="Future reward (γ)" value={learning.gamma} min={0} max={0.99} step={0.01} onChange={gamma => changeLearning({ gamma })} hint="How much later consequences matter." /></details>
           <p className="training-disclosure">Learns to select among four routing strategies. 6-minute episodes. Evaluation uses four fixed seeds with exploration off. Improvement is measured, never scripted.</p>
+          </>}
         </aside>
       </div>
       <section className="inspection-row" aria-label="Live inspection">
@@ -158,6 +164,6 @@ export function App() {
       </section>
       <footer className="status-bar"><span role="status"><i />{notice}</span><span>* Includes current waits · Model, not building telemetry</span></footer>
     </main>
-    <dialog ref={dialog} className="method-dialog" onCancel={() => setShowMethod(false)} onClick={e => { if (e.target === dialog.current) setShowMethod(false); }}><button className="dialog-close" onClick={() => setShowMethod(false)} aria-label="Close explanation">×</button><p className="eyebrow">INSIDE THE EXPERIMENT</p><h2>A real learner. A simplified world.</h2><p>The same deterministic engine runs the 3D replay and training. Each second, tabular Q-learning chooses one of four stop-selection strategies: collective, nearest stop, oldest call, or balanced. Choices affect cars when they become ready for a new stop.</p><h3>What the agent sees</h3><p>Bins for active hall calls, oldest waiting call, fleet occupancy, lobby demand, average car height, and active car count. Passenger destinations are used for routing only after boarding; hall calls expose direction.</p><h3>What the reward means</h3><code>cost = Σ [w₁·wait/60 + w₂·(wait/60)² + w₃·ride/60]</code><p>The agent receives the negative increase in cost every second. All waiting passengers count, including those still unserved at the six-minute horizon. The chart shows negative cost per arriving passenger; closer to zero is better.</p><h3>How comparisons work</h3><p>Training uses changing seeds. Evaluation uses four separate fixed seeds, no exploration, and a collective-control baseline with exactly the same arrivals. The baseline and evaluation use the same six-minute horizon. Replays use the seed in the environment controls, which is separate from the evaluation suite. Only the latest 100 checkpoints are retained in this tab.</p><h3>Model limits</h3><p>Travel uses constant floor speed, one-second steps, and fixed door dwell. There is no acceleration model or mid-flight route insertion. Rendering interpolates the resulting motion. These scores compare policies inside this model, not certified real-world lift performance.</p><h3>Next: a planning challenger</h3><p>PDDL integration, counterfactual routes, experiment branching, and sharing are tracked on the <a href="https://github.com/vinny380/elevator-policy-optimization/issues" target="_blank" rel="noreferrer">GitHub roadmap</a>. They are not implemented in this version.</p></dialog>
+    <dialog ref={dialog} className="method-dialog" onCancel={() => setShowMethod(false)} onClick={e => { if (e.target === dialog.current) setShowMethod(false); }}><button className="dialog-close" onClick={() => setShowMethod(false)} aria-label="Close explanation">×</button><p className="eyebrow">INSIDE THE EXPERIMENT</p><h2>A real learner. A simplified world.</h2><p>The same deterministic engine runs the 3D replay and training. Each second, tabular Q-learning chooses one of four stop-selection strategies: collective, nearest stop, oldest call, or balanced. Choices affect cars when they become ready for a new stop.</p><h3>What the agent sees</h3><p>Bins for active hall calls, oldest waiting call, fleet occupancy, lobby demand, average car height, and active car count. Passenger destinations are used for routing only after boarding; hall calls expose direction.</p><h3>What the reward means</h3><code>cost = Σ [w₁·wait/60 + w₂·(wait/60)² + w₃·ride/60]</code><p>The agent receives the negative increase in cost every second. All waiting passengers count, including those still unserved at the six-minute horizon. The chart shows negative cost per arriving passenger; closer to zero is better.</p><h3>How comparisons work</h3><p>Training uses changing seeds. Evaluation uses four separate fixed seeds, no exploration, and a collective-control baseline with exactly the same arrivals. The baseline and evaluation use the same six-minute horizon. Replays use the seed in the environment controls, which is separate from the evaluation suite. Only the latest 100 checkpoints are retained in this tab.</p><h3>Model limits</h3><p>Travel uses constant floor speed, one-second steps, and fixed door dwell. There is no acceleration model or mid-flight route insertion. Rendering interpolates the resulting motion. These scores compare policies inside this model, not certified real-world lift performance.</p><h3>The PDDL challenger</h3><p>The PDDL button runs a browser-native uniform-cost planner over grounded STRIPS with constant action costs. Each snapshot includes at most six legal stop candidates, prioritizing onboard destinations then oldest hall calls. The planner minimizes travel plus dwell; the simulator validates capacity and boarding and executes only the first stop before replanning. Inspect and download the actual domain, problem, and validated plan from the PDDL panel. This is a classical stop-order model, not a durative-action passenger model.</p><h3>What remains</h3><p>Full temporal planning, counterfactual routes, experiment branching, and sharing are tracked on the <a href="https://github.com/vinny380/elevator-policy-optimization/issues" target="_blank" rel="noreferrer">GitHub roadmap</a>. They are not implemented in this version.</p></dialog>
   </div>;
 }

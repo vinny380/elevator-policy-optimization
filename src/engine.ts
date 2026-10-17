@@ -1,3 +1,5 @@
+import { planStops, type PlanningSnapshot, type Stop } from './pddl';
+
 export type Pattern = 'night' | 'morning' | 'evening' | 'mixed';
 export interface Config {
   floors: number; cars: number; enabled: boolean[]; capacity: number;
@@ -24,6 +26,17 @@ export interface Metrics {
 export const STRATEGIES = ['Collective', 'Nearest stop', 'Oldest call', 'Balanced'] as const;
 export const MIN_FLOOR = -5;
 export const EPISODE_SECONDS = 360;
+export const PDDL_ACTION = 4;
+export const BASELINE_NAME = 'Selective collective (LOOK)';
+export function collectiveStop(position: number, direction: number, candidates: Stop[]): Stop | undefined {
+  for (const heading of [direction, -direction]) {
+    const ahead = candidates.filter(p => (p.floor - position) * heading >= 0);
+    const matching = ahead.filter(p => p.inside || p.direction === heading);
+    if (matching.length) return matching.sort((a, b) => Math.abs(a.floor - position) - Math.abs(b.floor - position))[0];
+    // With only opposite-direction calls ahead, go to the farthest call and sweep back.
+    if (ahead.length) return ahead.sort((a, b) => (b.floor - a.floor) * heading)[0];
+  }
+}
 export function floorLabel(n: number) { return n < 0 ? `P${-n}` : n === 0 ? 'G' : String(n); }
 export function random(seed: number) {
   let s = seed >>> 0;
@@ -36,6 +49,7 @@ export function validateConfig(c: Config) {
 }
 export class Simulation {
   config: Config; cars: Car[]; people: Passenger[] = []; time = 0; cost = 0; distance = 0;
+  lastPlan: PlanningSnapshot | null = null; plannerFallbacks = 0;
   private rng: () => number; private nextArrival: number;
   constructor(config: Config, seed = config.seed) {
     validateConfig(config); this.config = { ...config, enabled: [...config.enabled] }; this.rng = random(seed);
@@ -82,24 +96,25 @@ export class Simulation {
       !claimed.has(`${p.from}:${Math.sign(p.to - p.from)}`));
     const candidates = [...onboard.map(p => ({ floor: p.to, direction: Math.sign(p.to - car.position), age: this.time - p.arrived, inside: true })), ...hall.map(p => ({ floor: p.from, direction: Math.sign(p.to - p.from), age: this.time - p.arrived, inside: false }))];
     if (!candidates.length) { car.target = null; car.reason = 'No outstanding calls'; return; }
-    let pool = candidates;
-    if (action === 0) {
-      const ahead = (direction: number) => candidates.filter(p => (p.floor - car.position) * direction >= -0.01 && (p.inside || p.direction === direction));
-      pool = ahead(car.direction);
-      if (!pool.length) { car.direction *= -1; pool = ahead(car.direction); }
-      if (!pool.length) pool = candidates;
+    let stop: Stop | undefined;
+    let fallback = false;
+    if (action === PDDL_ACTION) {
+      this.lastPlan = planStops(car.position, candidates, this.config.speed, this.config.doors, car.id, this.time);
+      stop = this.lastPlan.firstStop ?? undefined;
+      if (!stop) { this.plannerFallbacks++; fallback = true; }
     }
+    if (action === 0 || fallback) stop = collectiveStop(car.position, car.direction, candidates);
     const cost = (p: typeof candidates[number]) => {
       const distance = Math.abs(p.floor - car.position);
       if (action === 2) return distance * 0.2 - p.age * 0.1 - Number(p.inside) * 3;
       if (action === 3) return distance - p.age * 0.12 + ((p.floor - car.position) * car.direction < 0 ? 8 : 0) - Number(p.inside) * 8;
       return distance - Number(p.inside) * (action === 1 ? 2 : 0);
     };
-    pool.sort((a, b) => cost(a) - cost(b) || a.floor - b.floor);
-    const stop = pool[0]; car.target = stop.floor; car.pickupDirection = stop.inside ? null : stop.direction;
+    if (!stop) stop = candidates.sort((a, b) => cost(a) - cost(b) || a.floor - b.floor)[0];
+    car.target = stop.floor; car.pickupDirection = stop.inside ? null : stop.direction;
     if (Math.abs(stop.floor - car.position) > 0.01) car.direction = Math.sign(stop.floor - car.position);
     else if (!stop.inside) car.direction = stop.direction;
-    car.reason = `${STRATEGIES[action]} → ${floorLabel(stop.floor)} · ${stop.inside ? 'onboard destination' : 'hall call'}`;
+    car.reason = `${action === PDDL_ACTION ? (fallback ? 'PDDL limit → LOOK fallback' : 'PDDL plan') : STRATEGIES[action]} → ${floorLabel(stop.floor)} · ${stop.inside ? 'onboard destination' : 'hall call'}`;
     if (!stop.inside) claimed.add(`${stop.floor}:${stop.direction}`);
   }
   private arrive(car: Car) {
@@ -110,7 +125,11 @@ export class Simulation {
     car.passengers = car.passengers.filter(id => this.people[id].delivered === null);
     const waiting = this.waiting().filter(p => p.from === car.position);
     if (car.pickupDirection !== null) car.direction = car.pickupDirection;
-    else if (car.passengers.length === 0 && waiting.length) car.direction = Math.sign(waiting[0].to - waiting[0].from);
+    else if (car.passengers.length === 0 && waiting.length) {
+      const demandAhead = this.waiting().some(p => (p.from - car.position) * car.direction > 0 ||
+        (p.from === car.position && Math.sign(p.to - p.from) === car.direction));
+      if (!demandAhead) car.direction = Math.sign(waiting[0].to - waiting[0].from);
+    }
     for (const p of waiting) {
       if (car.passengers.length >= this.config.capacity) break;
       if (Math.sign(p.to - p.from) !== car.direction) continue;
@@ -120,7 +139,7 @@ export class Simulation {
   }
   // A fixed one-second step makes reward and arrivals independent of rendering speed.
   step(action = 0, arrivals = true) {
-    if (!Number.isInteger(action) || action < 0 || action > 3) throw new Error('Unknown routing strategy');
+    if (!Number.isInteger(action) || action < 0 || action > PDDL_ACTION) throw new Error('Unknown routing strategy');
     const before = this.cost;
     if (arrivals) while (this.nextArrival <= this.time + 1) { this.spawn(this.nextArrival); this.nextArrival += this.arrivalInterval(); }
     for (const p of this.people) {
