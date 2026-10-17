@@ -11,9 +11,23 @@ const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 
 function Range({ label, value, min, max, step = 1, suffix = '', onChange, hint }: { label: string; value: number; min: number; max: number; step?: number; suffix?: string; onChange: (v: number) => void; hint?: string }) {
   return <label className="range-field"><span><span>{label}</span><output>{value}{suffix}</output></span><input type="range" min={min} max={max} step={step} value={value} onChange={e => onChange(Number(e.target.value))} style={{ '--fill': `${(value - min) / (max - min) * 100}%` } as React.CSSProperties} />{hint && <small>{hint}</small>}</label>;
 }
-function Section({ number, title, children }: { number: string; title: string; children: ReactNode }) {
-  return <section className="control-section"><h2><span>{number}</span>{title}</h2>{children}</section>;
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return <section className="control-section"><h3>{title}</h3>{children}</section>;
 }
+const icons = {
+  play: <path d="m9 5 11 7-11 7Z" />,
+  pause: <><path d="M8 5v14M16 5v14" /></>,
+  reset: <><path d="M3 10a9 9 0 1 1 2 8M3 4v6h6" /></>,
+  settings: <><path d="M4 7h16M4 17h16" /><circle cx="9" cy="7" r="3" /><circle cx="15" cy="17" r="3" /></>,
+  chart: <><path d="M4 4v16h16M8 15l4-6 4 3 4-7" /></>,
+  close: <path d="m6 6 12 12M6 18 18 6" />,
+  camera: <><path d="M8 4H4v4M16 4h4v4M4 16v4h4M20 16v4h-4" /><circle cx="12" cy="12" r="3" /></>,
+  arrow: <path d="M5 12h14m-5-5 5 5-5 5" />,
+};
+function Icon({ name }: { name: keyof typeof icons }) {
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{icons[name]}</svg>;
+}
+type Panel = 'settings' | 'learning' | 'comparison' | 'planner';
 export function App() {
   const [config, setConfig] = useState<Config>({ ...defaults, enabled: [...defaults.enabled] });
   const [sim, setSim] = useState(() => new Simulation(defaults));
@@ -28,10 +42,10 @@ export function App() {
   const [best, setBest] = useState<Checkpoint | null>(null);
   const [selectedCheckpoint, setSelectedCheckpoint] = useState<number | null>(null);
   const [stats, setStats] = useState({ episodes: 0, decisions: 0, states: 0 });
-  const [notice, setNotice] = useState('Start with the night that started it all.');
-  const [selectedPerson, setSelectedPerson] = useState<number>(1);
-  const [showMethod, setShowMethod] = useState(false);
-  const [experiment, setExperiment] = useState(1);
+  const [notice, setNotice] = useState('');
+  const [selectedPerson, setSelectedPerson] = useState<number | null>(null);
+  const [panel, setPanel] = useState<Panel | null>(null);
+  const [cameraReset, setCameraReset] = useState(0);
   const workerRef = useRef<Worker | null>(null);
   const qRef = useRef<QTable>({});
   const previousConfig = useRef(config);
@@ -50,8 +64,8 @@ export function App() {
     };
     worker.onerror = () => { setNotice('Training worker failed. Restart training to retry.'); setRunning(false); };
     setSim(new Simulation(config)); setPoints([]); setCheckpoints([]); setBest(null); setStats({ episodes: 0, decisions: 0, states: 0 });
-    setRunning(false); setSelectedCheckpoint(null); qRef.current = {}; setQVersion(null); setController('collective'); setSelectedPerson(config.pattern === 'night' ? 1 : 0);
-    if (previousConfig.current !== config) { setExperiment(n => n + 1); setNotice('New experiment; training and replay reset. Previous scores cleared.'); }
+    setRunning(false); setSelectedCheckpoint(null); qRef.current = {}; setQVersion(null); setController('collective'); setSelectedPerson(null);
+    if (previousConfig.current !== config) { setNotice('New experiment; training and replay reset. Previous scores cleared.'); }
     previousConfig.current = config;
     return () => { worker.terminate(); workerRef.current = null; };
   }, [config]);
@@ -68,7 +82,20 @@ export function App() {
     };
     frame = requestAnimationFrame(animate); return () => cancelAnimationFrame(frame);
   }, [sim, paused, speed, controller]);
-  useEffect(() => { if (showMethod) dialog.current?.showModal(); else dialog.current?.close(); }, [showMethod]);
+  useEffect(() => { if (panel) dialog.current?.showModal(); else dialog.current?.close(); }, [panel]);
+  useEffect(() => {
+    if (!notice) return;
+    const timer = window.setTimeout(() => setNotice(''), 5000);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+  useEffect(() => {
+    const keydown = (event: KeyboardEvent) => {
+      if (event.code !== 'Space' || event.repeat || panel || !(event.target instanceof HTMLElement) || event.target.closest('input, select, textarea, button, a, summary, [contenteditable]')) return;
+      event.preventDefault(); setPaused(value => !value);
+    };
+    window.addEventListener('keydown', keydown);
+    return () => window.removeEventListener('keydown', keydown);
+  }, [panel]);
   function change(partial: Partial<Config>) { setConfig(prev => ({ ...prev, ...partial })); }
   function fleet(count: number) {
     const enabled = [...config.enabled];
@@ -99,74 +126,74 @@ export function App() {
   const active = config.enabled.slice(0, config.cars).filter(Boolean).length;
   const latest = points.at(-1);
   const availableCheckpoints = best && !checkpoints.some(c => c.episode === best.episode) ? [best, ...checkpoints] : checkpoints;
-  const person = sim.people[selectedPerson];
+  const person = selectedPerson === null ? null : sim.people[selectedPerson];
   const clock = `${String(Math.floor(sim.time / 60)).padStart(2, '0')}:${String(sim.time % 60).padStart(2, '0')}`;
-  return <div className="app-shell">
-    <header className="app-header">
-      <a href="#" className="brand" aria-label="Elevator Policy Optimization home"><span className="brand-mark">↑<span>↓</span></span><span>ELEVATOR<span className="brand-sub">POLICY OPTIMIZATION</span></span></a>
-      <nav aria-label="Main navigation"><a className="nav-active" href="#simulation">Playground</a><button onClick={() => setShowMethod(true)}>How it works <span>↗</span></button><a href="https://github.com/vinny380/elevator-policy-optimization/issues" target="_blank" rel="noreferrer">Roadmap <span>↗</span></a></nav>
-      <span className="version"><i /> LOCAL LAB <span>v0.1</span></span>
+  return <main className="game" aria-label="Elevator Policy Optimization">
+    <Building simulation={sim} onSelect={setSelectedPerson} resetToken={cameraReset} />
+    <div className="scene-vignette" />
+    <header className="hud-header">
+      <div className="identity"><span className="identity-mark" aria-hidden="true">↑↓</span><div><h1>Elevator</h1><p>Policy optimization</p></div></div>
+      <nav className="policy-switch glass" aria-label="Elevator controller">
+        <button aria-pressed={controller === 'collective'} onClick={() => replay('collective')}>LOOK</button>
+        <button aria-pressed={controller === 'learned'} onClick={() => { if (best) chooseCheckpoint(best.episode); else { setPanel('learning'); setNotice('Train a policy to unlock RL playback.'); } }}>RL{!best && <span className="untrained-dot" aria-label="Not trained" />}</button>
+        <button aria-pressed={controller === 'pddl'} onClick={() => replay('pddl')}>PDDL</button>
+      </nav>
+      <div className="hud-tools"><button className="icon-button glass" title="Compare algorithms" aria-label="Compare algorithms" onClick={() => setPanel('comparison')}><Icon name="chart" /></button><button className="icon-button glass" title="Building settings" aria-label="Building settings" onClick={() => setPanel('settings')}><Icon name="settings" /></button></div>
     </header>
-    <main>
-      <div className="page-title"><div><p className="eyebrow">AN EXPERIMENT IN MOVING PEOPLE</p><h1>Every floor. A better decision.</h1><p>Build the conditions. Change the incentives. Watch a policy learn.</p></div><div className="experiment-id"><span>EXPERIMENT</span><strong>{String(experiment).padStart(3, '0')}</strong><small>SEED {config.seed}</small></div></div>
-      <ComparisonPanel config={config} q={qVersion === null ? null : qRef.current} checkpoint={qVersion} onWatch={which => { replay(which); document.getElementById('simulation')?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); }} />
-      <div className="workspace">
-        <aside className="left-panel">
-          <div className="panel-top"><span>ENVIRONMENT</span><span className="small-icon">⌘</span></div>
-          <Section number="01" title="The building">
-            <Range label="Above-ground floors" value={config.floors} min={10} max={40} onChange={floors => change({ floors })} />
-            <div className="subtle-row"><span>Ground + parking</span><span>G · P1–P5</span></div>
-            <div className="field-label">Elevators <span>{config.cars} installed</span></div>
-            <div className="fleet-picker" role="group" aria-label="Number of elevators">{[1, 2, 3, 4, 5].map(n => <button key={n} className={config.cars === n ? 'selected' : ''} aria-pressed={config.cars === n} onClick={() => fleet(n)}>{n}</button>)}</div>
-            <div className="car-toggles">{config.enabled.slice(0, config.cars).map((enabled, id) => <button key={id} className={enabled ? 'car-toggle online' : 'car-toggle offline'} onClick={() => toggleCar(id)} aria-label={`Elevator ${String.fromCharCode(65 + id)} ${enabled ? 'in service' : 'out of service'}`} aria-pressed={enabled}><span className="mini-car">▥</span><strong>{String.fromCharCode(65 + id)}</strong><i /></button>)}</div>
-            <p className="field-note">Click a car to toggle service. Changes start a new experiment.</p>
-            <details><summary>Car specifications <span>+</span></summary><Range label="Capacity" value={config.capacity} min={2} max={16} suffix=" people" onChange={capacity => change({ capacity })} /><Range label="Travel speed" value={config.speed} min={0.5} max={3} step={0.25} suffix=" fl/s" onChange={speed => change({ speed })} /><Range label="Door dwell" value={config.doors} min={2} max={10} suffix=" s" onChange={doors => change({ doors })} /></details>
-          </Section>
-          <Section number="02" title="The people">
-            <label className="select-label">Traffic pattern<select value={config.pattern} onChange={e => change({ pattern: e.target.value as Pattern })}><option value="night">Late night</option><option value="morning">Morning rush ↑</option><option value="evening">Evening rush ↓</option><option value="mixed">Between floors ↕</option></select></label>
-            <Range label="Arrival rate" value={config.demand} min={1} max={30} suffix=" / min" onChange={demand => change({ demand })} />
-            <label className="seed-field">Random seed<input aria-label="Random seed" type="number" min={1} max={999999} value={config.seed} onChange={e => { const seed = Number(e.target.value); if (Number.isInteger(seed) && seed >= 1 && seed <= 999999) change({ seed }); }} /></label>
-          </Section>
-          <button className="scenario-card" onClick={() => { setConfig({ ...defaults, enabled: [...defaults.enabled] }); setNotice('Original scenario restored: three cars, one working, you at G.'); }}><span className="scenario-time">22:30 <span>↗</span></span><strong>The night it started</strong><span>Three elevators. One working.<br />One very long wait.</span><span className="scenario-link">Load original scenario →</span></button>
-          <div className="left-footer"><i /> Everything runs in your browser.</div>
-        </aside>
-        <section className="simulation-panel" id="simulation" aria-label="Live elevator simulation">
-          <div className="scene-header"><div><span className="live-dot" /> LIVE SIMULATION <span className="scene-clock">{clock}</span></div><span className={active < config.cars ? 'service-badge degraded' : 'service-badge'}>{active} / {config.cars} IN SERVICE</span></div>
-          <div className="scene-controller"><button aria-pressed={controller === 'collective'} className={controller === 'collective' ? 'active' : ''} onClick={() => replay('collective')}>Conventional <span>LOOK</span></button><button disabled={!checkpoints.length} aria-pressed={controller === 'learned'} className={controller === 'learned' ? 'active' : ''} onClick={() => { if (best) chooseCheckpoint(best.episode); }}>Learned <span>RL</span></button><button aria-pressed={controller === 'pddl'} className={controller === 'pddl' ? 'active' : ''} onClick={() => replay('pddl')}>Planner <span>PDDL</span></button></div>
-          <Building simulation={sim} onSelect={setSelectedPerson} />
-          <div className="scene-caption"><span>{config.floors} FLOORS IS A LONG WAY TO WAIT.</span><p>{config.floors} above ground · 5 below · {config.capacity} people per car</p></div>
-          <div className="scene-legend"><span><i className="legend-calm" /> Waiting</span><span><i className="legend-angry" /> Long wait</span><span className="drag-hint">Drag to orbit · scroll to zoom</span></div>
-          <div className="scene-bottom"><div className="playback"><button aria-label={paused ? 'Play simulation' : 'Pause simulation'} className="play-button" onClick={() => setPaused(p => !p)}>{paused ? '▶' : 'Ⅱ'}</button><button aria-label="Reset simulation" onClick={() => replay()}>↺</button><div className="speed-picker" role="group" aria-label="Simulation playback speed">{[1, 4, 16].map(n => <button key={n} className={speed === n ? 'active' : ''} aria-pressed={speed === n} onClick={() => setSpeed(n)}>{n}×</button>)}</div><span className="playback-label">{controller === 'learned' ? `CHECKPOINT ${qVersion}` : controller === 'pddl' ? 'PDDL PLANNER' : 'CONVENTIONAL LOOK'}</span></div>
-          <div className="metrics"><div><span>Waiting now</span><strong>{metrics.waiting}<small>people</small></strong></div><div><span>Mean wait*</span><strong>{Math.round(metrics.meanWait)}<small>sec</small></strong></div><div><span>95th percentile*</span><strong>{Math.round(metrics.p95)}<small>sec</small></strong></div><div><span>Delivered</span><strong>{metrics.delivered}<small>people</small></strong></div></div></div>
-        </section>
-        <aside className="right-panel" id="learning">
-          <div className="panel-top"><span>{controller === 'pddl' ? 'THE PLANNING LAB' : 'THE LEARNING LAB'}</span><span className="beta-tag">{controller === 'pddl' ? 'PDDL / STRIPS' : 'Q-LEARNING'}</span></div>
-          {controller === 'pddl' ? <><PddlInspector plan={sim.lastPlan} fallbacks={sim.plannerFallbacks} /><div className="pddl-return"><p>{running ? `RL training continues in the background · ${fmt(stats.episodes)} episodes.` : 'The planner works immediately. It does not need training.'}</p>{running && <button onClick={train}>Pause RL training</button>}<button onClick={() => replay('collective')}>Back to learning controls →</button></div></> : <>
-          <div className="training-intro"><h2>Better is learned.</h2><p>Learn from each routing decision.<br />A little less waiting, if the policy improves.</p></div>
-          <div className="chart-heading"><span>LATEST EVALUATION <span className="muted">↑ BETTER</span></span><strong>{latest ? latest.evaluation.toFixed(2) : '—'}</strong></div>
-          <Chart points={points} selected={selectedCheckpoint} onSelect={chooseCheckpoint} />
-          <div className="chart-legend"><span><i className="evaluation-key" /> Evaluation</span><span><i className="training-key" /> Training</span><span><i className="baseline-key" /> Baseline</span></div>
-          {latest && best && <div className="learning-progress"><div><span>Best saved <strong>{best.score.toFixed(2)}</strong></span><span>LOOK <strong>{latest.baseline.toFixed(2)}</strong></span></div><p>{best.score >= latest.baseline ? 'Best checkpoint matches or beats LOOK on these evaluation seeds.' : 'Best checkpoint still trails LOOK on these evaluation seeds.'} {stats.episodes - best.episode > 0 ? `${fmt(stats.episodes - best.episode)} episodes since the last best score.` : 'New best checkpoint saved.'}</p><button onClick={() => chooseCheckpoint(best.episode)}>Replay best · episode {fmt(best.episode)} →</button></div>}
-          <div className="training-counters"><div><strong>{fmt(stats.episodes)}</strong><span>EPISODES</span></div><div><strong>{fmt(stats.decisions)}</strong><span>POLICY CHOICES</span></div><div><strong>{fmt(stats.states)}</strong><span>Q STATES</span></div></div>
-          <button className={`train-button ${running ? 'is-training' : ''}`} onClick={train}><span>{running ? 'Ⅱ' : '▷'}</span>{running ? 'Pause training' : stats.episodes ? 'Resume training' : 'Start learning'}<span>{running ? <i className="training-pulse" /> : '→'}</span></button>
-          <div className="checkpoint-control"><label htmlFor="checkpoint">Replay a checkpoint</label><select id="checkpoint" disabled={!checkpoints.length} value={selectedCheckpoint ?? ''} onChange={e => chooseCheckpoint(Number(e.target.value))}><option value="" disabled>{checkpoints.length ? 'Choose a trained policy…' : 'Available after training'}</option>{selectedCheckpoint !== null && !availableCheckpoints.some(c => c.episode === selectedCheckpoint) && <option value={selectedCheckpoint}>Episode {fmt(selectedCheckpoint)} · currently loaded</option>}{availableCheckpoints.map(c => <option value={c.episode} key={c.episode}>Episode {fmt(c.episode)} · {c.score.toFixed(2)}{c.episode === best?.episode ? ' · best' : ''}</option>)}</select><button className="restart-training" disabled={!stats.episodes} onClick={() => { setConfig(prev => ({ ...prev })); }}>Restart from scratch</button><small>Clears checkpoints and restarts replay. Keeps your settings.</small></div>
-          <Section number="03" title="What should it care about?">
-            <Range label="Waiting time" value={config.waitWeight} min={0} max={4} step={0.25} onChange={waitWeight => change({ waitWeight })} />
-            <Range label="Long-wait penalty" value={config.tailWeight} min={0} max={4} step={0.25} onChange={tailWeight => change({ tailWeight })} />
-            <Range label="Time inside the car" value={config.rideWeight} min={0} max={4} step={0.25} onChange={rideWeight => change({ rideWeight })} />
-            <p className="field-note">A long wait gets increasingly expensive. Changing rewards starts a fresh experiment.</p>
-          </Section>
-          <details className="learning-settings"><summary>Learning parameters <span>+</span></summary><Range label="Exploration (ε)" value={learning.epsilon} min={0} max={1} step={0.05} onChange={epsilon => changeLearning({ epsilon })} hint="Chance of trying a different strategy." /><Range label="Learning rate (α)" value={learning.alpha} min={0.01} max={1} step={0.01} onChange={alpha => changeLearning({ alpha })} hint="How strongly new outcomes update the policy." /><Range label="Future reward (γ)" value={learning.gamma} min={0} max={1} step={0.01} onChange={gamma => changeLearning({ gamma })} hint="Discount per second. 0.99 retains 74% after 30s; 1 values the whole episode." /></details>
-          <p className="training-disclosure">Learns among four routing strategies in 6-minute episodes. Best is selected on four fixed seeds with exploration off; it may overfit them. Check separate traffic in the comparison table.</p>
-          </>}
-        </aside>
+    <section className="live-stats" aria-label="Live statistics">
+      <div><strong>{Math.round(metrics.meanWait)}<small>s</small></strong><span>Avg. wait</span></div>
+      <div><strong>{metrics.waiting}</strong><span>Waiting</span></div>
+      <div><strong>{metrics.delivered}</strong><span>Arrived</span></div>
+    </section>
+    <aside className="learning-hud glass" aria-label={controller === 'pddl' ? 'Planner' : 'Learning progress'}>
+      {controller === 'pddl' ? <>
+        <div className="hud-card-title"><span><i className="status-dot" /> PDDL planner</span><button className="icon-button" title="Inspect PDDL" aria-label="Inspect PDDL" onClick={() => setPanel('planner')}><Icon name="arrow" /></button></div>
+        <div className="next-stop"><span>Next stop</span><strong>{sim.lastPlan?.firstStop ? floorLabel(sim.lastPlan.firstStop.floor) : '—'}</strong></div>
+        <p className="hud-caption">{sim.lastPlan ? `${sim.lastPlan.stops.length} stops · ${sim.lastPlan.cost}s planned route` : 'Waiting for a call'}</p>
+        <button className="text-button" onClick={() => setPanel('planner')}>View plan <Icon name="arrow" /></button>
+      </> : <>
+        <div className="hud-card-title"><span><i className={`status-dot ${running ? 'running' : ''}`} /> {running ? 'Learning' : 'Reinforcement learning'}</span><button className="icon-button" title="Learning settings and checkpoints" aria-label="Learning settings and checkpoints" onClick={() => setPanel('learning')}><Icon name="settings" /></button></div>
+        <div className="reward-summary"><strong title="Evaluation score · higher is better">{latest ? latest.evaluation.toFixed(2) : '—'}</strong><span>{stats.episodes ? `${fmt(stats.episodes)} episodes` : 'Ready to train'}</span></div>
+        <Chart points={points} selected={selectedCheckpoint} onSelect={chooseCheckpoint} />
+        {latest && <div className="score-key"><span><i />Latest</span><span>Best {best?.score.toFixed(2)}</span><span>LOOK {latest.baseline.toFixed(2)}</span></div>}
+        <button className="primary-button" onClick={train}><Icon name={running ? 'pause' : 'play'} />{running ? 'Pause training' : stats.episodes ? 'Resume training' : 'Train a policy'}</button>
+        {best && <button className="text-button replay-best" onClick={() => chooseCheckpoint(best.episode)}>Replay best <Icon name="arrow" /></button>}
+      </>}
+    </aside>
+    <div className="world-info"><span className="world-status"><i className={`status-dot ${active < config.cars ? 'warning' : ''}`} />{active} of {config.cars} elevators online</span><span>{config.floors} floors · G · P1–P5</span></div>
+    {person && <section className="passenger-card glass" aria-label="Selected passenger"><button className="icon-button" aria-label="Close passenger" onClick={() => setSelectedPerson(null)}><Icon name="close" /></button><span>{person.id === 1 && config.pattern === 'night' ? 'You' : `Passenger ${person.id + 1}`}</span><strong>{floorLabel(person.from)} <span>→</span> {floorLabel(person.to)}</strong><p>{person.delivered !== null ? 'Arrived' : person.boarded !== null ? `In elevator ${String.fromCharCode(65 + person.car!)}` : 'Waiting'} · {Math.round((person.boarded ?? sim.time) - person.arrived)}s wait</p></section>}
+    <div className="playback-dock glass" role="group" aria-label="Playback controls">
+      <button className="icon-button play-toggle" onClick={() => setPaused(value => !value)} title={paused ? 'Play (Space)' : 'Pause (Space)'} aria-label={paused ? 'Play simulation' : 'Pause simulation'}><Icon name={paused ? 'play' : 'pause'} /></button>
+      <span className="sim-time">{clock}</span><span className="dock-divider" />
+      <button className="speed-button" aria-label={`Playback speed ${speed} times. Click to change.`} onClick={() => setSpeed(value => value === 1 ? 4 : value === 4 ? 16 : 1)}>{speed}×</button>
+      <button className="icon-button" title="Restart simulation" aria-label="Restart simulation" onClick={() => replay()}><Icon name="reset" /></button>
+      <button className="icon-button" title="Reset camera" aria-label="Reset camera" onClick={() => setCameraReset(value => value + 1)}><Icon name="camera" /></button>
+    </div>
+    <span className="camera-hint">Drag to orbit · scroll to zoom</span>
+    <div className={`notice glass ${notice ? 'visible' : ''}`} role="status">{notice}</div>
+    <dialog ref={dialog} className={`game-dialog ${panel === 'comparison' ? 'wide-dialog' : ''}`} aria-labelledby="panel-title" onCancel={() => setPanel(null)} onClick={event => { if (event.target === dialog.current) { const rect = dialog.current.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) setPanel(null); } }}>
+      <header className="dialog-header"><h2 id="panel-title">{panel === 'settings' ? 'Building' : panel === 'learning' ? 'Learning' : panel === 'comparison' ? 'Compare policies' : 'PDDL plan'}</h2><button className="icon-button" autoFocus aria-label="Close panel" onClick={() => setPanel(null)}><Icon name="close" /></button></header>
+      <div className="dialog-content">
+        {notice && <p className="panel-notice" role="status">{notice}</p>}
+        {panel === 'settings' && <>
+          <Section title="Elevators"><div className="fleet-picker" role="group" aria-label="Number of elevators">{[1, 2, 3, 4, 5].map(n => <button key={n} aria-pressed={config.cars === n} onClick={() => fleet(n)}>{n}</button>)}</div><div className="car-toggles">{config.enabled.slice(0, config.cars).map((enabled, id) => <button key={id} aria-pressed={enabled} aria-label={`Elevator ${String.fromCharCode(65 + id)} ${enabled ? 'online' : 'offline'}`} onClick={() => toggleCar(id)}><span className={`status-dot ${enabled ? '' : 'warning'}`} />{String.fromCharCode(65 + id)}<small>{enabled ? 'Online' : 'Offline'}</small></button>)}</div></Section>
+          <Section title="Building & traffic"><Range label="Floors" value={config.floors} min={10} max={40} onChange={floors => change({ floors })} /><label className="select-label">Traffic<select value={config.pattern} onChange={event => change({ pattern: event.target.value as Pattern })}><option value="night">Late night</option><option value="morning">Morning rush</option><option value="evening">Evening rush</option><option value="mixed">Between floors</option></select></label><Range label="Arrivals" value={config.demand} min={1} max={30} suffix=" / min" onChange={demand => change({ demand })} /></Section>
+          <details><summary>Car specifications</summary><Range label="Capacity" value={config.capacity} min={2} max={16} onChange={capacity => change({ capacity })} /><Range label="Travel speed" value={config.speed} min={0.5} max={3} step={0.25} suffix=" fl/s" onChange={speed => change({ speed })} /><Range label="Door dwell" value={config.doors} min={2} max={10} suffix="s" onChange={doors => change({ doors })} /><label className="select-label">Seed<input aria-label="Random seed" type="number" min={1} max={999999} value={config.seed} onChange={event => { const seed = Number(event.target.value); if (Number.isInteger(seed) && seed >= 1 && seed <= 999999) change({ seed }); }} /></label></details>
+          <details><summary>Follow a passenger</summary><label className="select-label">Passenger<select aria-label="Passenger to follow" value={selectedPerson ?? ''} onChange={event => { setSelectedPerson(Number(event.target.value)); setPanel(null); }}><option value="" disabled>Select a passenger</option>{sim.people.map(p => <option key={p.id} value={p.id}>{p.id === 1 && config.pattern === 'night' ? 'You' : `Passenger ${p.id + 1}`} · {floorLabel(p.from)} → {floorLabel(p.to)}</option>)}</select></label></details>
+          <button className="secondary-button" onClick={() => setConfig({ ...defaults, enabled: [...defaults.enabled] })}>Restore original scenario</button><p className="field-note">Building changes reset training and replay.</p>
+          <details><summary>About the simulation</summary><p>Constant-speed travel, fixed door dwell, and no mid-flight route changes. Wait statistics include unserved passengers. This models the starting conditions of your late-night trip, not your building’s proprietary controller.</p><p>RL selects among four routing strategies using approximate state bins and duration-aware Q-learning. PDDL plans up to six known stops with classical action costs. Full temporal planning remains on the roadmap.</p><a href="https://github.com/vinny380/elevator-policy-optimization" target="_blank" rel="noreferrer">Source & methodology ↗</a></details>
+        </>}
+        {panel === 'learning' && <>
+          <Chart points={points} selected={selectedCheckpoint} onSelect={chooseCheckpoint} /><div className="learning-totals"><div><strong>{fmt(stats.episodes)}</strong><span>Episodes</span></div><div><strong>{fmt(stats.decisions)}</strong><span>Choices</span></div><div><strong>{fmt(stats.states)}</strong><span>States</span></div></div>
+          <Section title="Checkpoints"><label className="select-label">Replay<select disabled={!checkpoints.length} value={selectedCheckpoint ?? ''} onChange={event => chooseCheckpoint(Number(event.target.value))}><option value="" disabled>{checkpoints.length ? 'Select a policy' : 'Train to create checkpoints'}</option>{selectedCheckpoint !== null && !availableCheckpoints.some(c => c.episode === selectedCheckpoint) && <option value={selectedCheckpoint}>Episode {fmt(selectedCheckpoint)} · loaded</option>}{availableCheckpoints.map(c => <option value={c.episode} key={c.episode}>Episode {fmt(c.episode)} · {c.score.toFixed(2)}{c.episode === best?.episode ? ' · best' : ''}</option>)}</select></label>{best && <p className="field-note">{fmt(stats.episodes - best.episode)} episodes since the best score. {latest && best.score < latest.baseline ? 'Best still trails LOOK.' : 'Best matches or beats LOOK on evaluation seeds.'}</p>}<button className="primary-button" onClick={train}><Icon name={running ? 'pause' : 'play'} />{running ? 'Pause training' : stats.episodes ? 'Resume training' : 'Train a policy'}</button></Section>
+          <Section title="Reward"><Range label="Waiting time" value={config.waitWeight} min={0} max={4} step={0.25} onChange={waitWeight => change({ waitWeight })} /><Range label="Long waits" value={config.tailWeight} min={0} max={4} step={0.25} onChange={tailWeight => change({ tailWeight })} /><Range label="Time inside car" value={config.rideWeight} min={0} max={4} step={0.25} onChange={rideWeight => change({ rideWeight })} /><p className="field-note">Reward changes start a fresh experiment.</p></Section>
+          <details><summary>Learning parameters</summary><Range label="Exploration ε" value={learning.epsilon} min={0} max={1} step={0.05} onChange={epsilon => changeLearning({ epsilon })} /><Range label="Learning rate α" value={learning.alpha} min={0.01} max={1} step={0.01} onChange={alpha => changeLearning({ alpha })} /><Range label="Discount γ" value={learning.gamma} min={0} max={1} step={0.01} onChange={gamma => changeLearning({ gamma })} hint="Per second. 1 values the entire episode equally." /></details>
+          <details><summary>How scores work</summary><p>Higher is better: negative waiting, long-wait, and ride cost per passenger. Six-minute episodes; four fixed evaluation seeds with exploration off. Best can overfit those seeds—use Compare to test separate traffic.</p><p>The graph retains 100 checkpoints plus the best-ever policy. Replay uses the building seed. Training stays in this tab; reload clears it.</p></details>
+          <button className="secondary-button" disabled={!stats.episodes} onClick={() => setConfig(prev => ({ ...prev }))}>Restart from scratch</button><p className="field-note">Clears checkpoints. Keeps your settings.</p>
+        </>}
+        {panel === 'comparison' && <ComparisonPanel config={config} q={qVersion === null ? null : qRef.current} checkpoint={qVersion} onWatch={which => { replay(which); setPanel(null); }} />}
+        {panel === 'planner' && <PddlInspector plan={sim.lastPlan} fallbacks={sim.plannerFallbacks} />}
       </div>
-      <section className="inspection-row" aria-label="Live inspection">
-        <div className="passenger-inspector"><span className="inspector-icon">♙</span><div><span className="eyebrow">FOLLOW A PASSENGER</span><div className="passenger-select"><select aria-label="Passenger to follow" value={person ? selectedPerson : ''} onChange={e => setSelectedPerson(Number(e.target.value))}>{!sim.people.length && <option value="">Waiting for the first arrival</option>}{sim.people.map(p => <option key={p.id} value={p.id}>{p.id === 1 && config.pattern === 'night' ? 'You' : `Passenger ${p.id + 1}`} · {floorLabel(p.from)} → {floorLabel(p.to)}</option>)}</select></div></div>{person && <div className="passenger-status"><strong>{person.delivered !== null ? 'Arrived' : person.boarded !== null ? `In car ${String.fromCharCode(65 + person.car!)}` : 'Waiting'}<span>{Math.round((person.boarded ?? sim.time) - person.arrived)}s wait</span></strong><div className="frustration-track"><i style={{ width: `${Math.min(100, ((person.boarded ?? sim.time) - person.arrived) / 1.2)}%` }} /></div></div>}</div>
-        <div className="decision-inspector"><span className="eyebrow">NEXT DECISION</span>{sim.cars.filter(c => c.enabled).slice(0, 2).map(c => <p key={c.id}><span>{String.fromCharCode(65 + c.id)}</span>{c.reason} <small>· {c.passengers.length}/{config.capacity} aboard</small></p>)}</div>
-      </section>
-      <footer className="status-bar"><span role="status"><i />{notice}</span><span>* Includes current waits · Model, not building telemetry</span></footer>
-    </main>
-    <dialog ref={dialog} className="method-dialog" onCancel={() => setShowMethod(false)} onClick={e => { if (e.target === dialog.current) setShowMethod(false); }}><button className="dialog-close" onClick={() => setShowMethod(false)} aria-label="Close explanation">×</button><p className="eyebrow">INSIDE THE EXPERIMENT</p><h2>A real learner. A simplified world.</h2><p>The same deterministic engine runs the 3D replay and training. When a car is ready, tabular Q-learning chooses one of four stop-selection strategies: collective, nearest stop, oldest call, or balanced. The update credits that choice for the cost accrued until the next decision opportunity, including travel and door dwell. Idle opportunities are counted too.</p><h3>What the agent sees</h3><p>Bins for active hall calls, oldest waiting call, fleet occupancy, lobby demand, average car height, active car count, the first ready car’s floor and direction, and episode phase. These bins still combine different situations; they are not a complete world state. Passenger destinations are used for routing only after boarding; hall calls expose direction.</p><h3>What the reward means</h3><code>cost = Σ [w₁·wait/60 + w₂·(wait/60)² + w₃·ride/60]</code><p>The agent accumulates discounted negative cost increments between decision opportunities. The bootstrap uses the same per-second discount raised to the elapsed seconds. All waiting passengers count, including those still unserved at the six-minute horizon. The chart shows negative cost per arriving passenger; closer to zero is better.</p><h3>How comparisons work</h3><p>Training uses changing seeds. Evaluation uses four separate fixed seeds, no exploration, and a collective-control baseline with exactly the same arrivals. The baseline and evaluation use the same six-minute horizon. Replays use the seed in the environment controls, which is separate from the evaluation suite. The latest 100 checkpoints plus the best-ever evaluation checkpoint are retained in this tab. The headline is the latest evaluation, which can regress; best saved is shown separately. All snapshots are cleared when restarting or reloading.</p><h3>Model limits</h3><p>Travel uses constant floor speed, one-second steps, and fixed door dwell. There is no acceleration model or mid-flight route insertion. Rendering interpolates the resulting motion. These scores compare policies inside this model, not certified real-world lift performance.</p><h3>The PDDL challenger</h3><p>The PDDL button runs a browser-native uniform-cost planner over grounded STRIPS with constant action costs. Each snapshot includes at most six legal stop candidates, prioritizing onboard destinations then oldest hall calls. The planner minimizes travel plus dwell; the simulator validates capacity and boarding and executes only the first stop before replanning. Inspect and download the actual domain, problem, and validated plan from the PDDL panel. This is a classical stop-order model, not a durative-action passenger model.</p><h3>What remains</h3><p>Full temporal planning, counterfactual routes, experiment branching, and sharing are tracked on the <a href="https://github.com/vinny380/elevator-policy-optimization/issues" target="_blank" rel="noreferrer">GitHub roadmap</a>. They are not implemented in this version.</p></dialog>
-  </div>;
+    </dialog>
+  </main>;
 }

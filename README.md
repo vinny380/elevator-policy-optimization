@@ -16,7 +16,7 @@ Open the localhost URL printed by Vite. `npm test` checks engine invariants and 
 ## Implemented
 
 - 10–40 above-ground floors, G, and P1–P5; 1–5 elevators with individual service toggles. Default: 40 floors, three cars, two offline.
-- Three.js cutaway with passenger queues, animated cars and doors, orbit/zoom controls, passenger inspection, pause/reset/playback speed, and live metrics.
+- Full-screen Three.js cutaway with a night city, illuminated cabins, passenger queues, orbit/zoom/pan, and a compact floating HUD. System typography, reduced-motion/transparency support, and responsive camera framing. Space pauses playback; the bottom dock controls speed, replay, and camera reset. Select passengers in the scene or through Building settings.
 - Seeded night, morning, evening, and inter-floor traffic; adjustable capacity, speed, door dwell, and arrival rate.
 - An explicitly labeled selective collective (LOOK) reference and tabular Q-learning that selects among collective, nearest-stop, oldest-call, and balanced strategies. Each car uses the chosen strategy when it needs its next stop.
 - Background-worker training; adjustable learning rate, exploration, and discount; actual episode/policy-choice counts; fixed-seed evaluation; replayable checkpoints.
@@ -25,7 +25,7 @@ Open the localhost URL printed by Vite. `npm test` checks engine invariants and 
 
 The comparison table runs each available controller on the same four six-minute traffic streams. Its test seeds (-810001 through -810004) are separate from training and checkpoint selection. It shows mean wait, mean per-run P95, frustration per passenger, completed trips, and unserved passengers. Relative changes are signed; worse results are not hidden. Four seeds are a small diagnostic comparison, not a significance claim. A selected RL checkpoint is frozen with exploration disabled for this comparison. The comparison worker is terminated when the configuration or checkpoint changes, preventing stale results from being displayed.
 
-Use **Conventional / LOOK**, **Learned / RL**, or **Planner / PDDL** above the tower to watch each controller. The comparison's Watch buttons replay the environment seed, not the four aggregated test seeds. Select an RL checkpoint to add it to the comparison.
+Use **LOOK**, **RL**, or **PDDL** in the top selector to watch each controller. RL opens Learning until a checkpoint exists. The chart icon opens comparisons; the sliders icon opens Building settings. The compact learning card starts/pauses training, replays the best policy, and opens reward, learning, and checkpoint controls. On phones, the full chart is inside Learning. The PDDL card opens the live plan inspector and exports. The comparison’s Watch buttons replay the environment seed, not the four aggregated test seeds. Select an RL checkpoint to add it to the comparison.
 
 Selective collective control serves matching-direction calls while sweeping the building. This LOOK implementation reverses at outstanding requests rather than empty end floors, and uses the farthest opposite-direction hall call as a turning point. Cars share call assignments. It is a simplified implementation of a conventional algorithm family, not proprietary manufacturer firmware.
 
