@@ -1,0 +1,2674 @@
+{
+  "methodology": "Frozen controllers. 40 reserved seeds × four traffic patterns × 1/2/3/5 online cars. Equal weight per trial; paired cost intervals use seed blocks and t(39)=2.023. Six-minute horizon; unfinished passengers accrue costs. CPU timings are environment-dependent. No final-test model selection.",
+  "seeds": [
+    -970001,
+    -970002,
+    -970003,
+    -970004,
+    -970005,
+    -970006,
+    -970007,
+    -970008,
+    -970009,
+    -970010,
+    -970011,
+    -970012,
+    -970013,
+    -970014,
+    -970015,
+    -970016,
+    -970017,
+    -970018,
+    -970019,
+    -970020,
+    -970021,
+    -970022,
+    -970023,
+    -970024,
+    -970025,
+    -970026,
+    -970027,
+    -970028,
+    -970029,
+    -970030,
+    -970031,
+    -970032,
+    -970033,
+    -970034,
+    -970035,
+    -970036,
+    -970037,
+    -970038,
+    -970039,
+    -970040
+  ],
+  "scenarios": [
+    {
+      "name": "night / 1 online",
+      "config": {
+        "floors": 40,
+        "cars": 1,
+        "enabled": [
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "capacity": 8,
+        "speed": 1.5,
+        "doors": 4,
+        "demand": 5,
+        "pattern": "night",
+        "seed": 42,
+        "waitWeight": 1,
+        "tailWeight": 2,
+        "rideWeight": 0.25
+      }
+    },
+    {
+      "name": "night / 2 online",
+      "config": {
+        "floors": 40,
+        "cars": 2,
+        "enabled": [
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "capacity": 8,
+        "speed": 1.5,
+        "doors": 4,
+        "demand": 5,
+        "pattern": "night",
+        "seed": 42,
+        "waitWeight": 1,
+        "tailWeight": 2,
+        "rideWeight": 0.25
+      }
+    },
+    {
+      "name": "night / 3 online",
+      "config": {
+        "floors": 40,
+        "cars": 3,
+        "enabled": [
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "capacity": 8,
+        "speed": 1.5,
+        "doors": 4,
+        "demand": 5,
+        "pattern": "night",
+        "seed": 42,
+        "waitWeight": 1,
+        "tailWeight": 2,
+        "rideWeight": 0.25
+      }
+    },
+    {
+      "name": "night / 5 online",
+      "config": {
+        "floors": 40,
+        "cars": 5,
+        "enabled": [
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "capacity": 8,
+        "speed": 1.5,
+        "doors": 4,
+        "demand": 5,
+        "pattern": "night",
+        "seed": 42,
+        "waitWeight": 1,
+        "tailWeight": 2,
+        "rideWeight": 0.25
+      }
+    },
+    {
+      "name": "morning / 1 online",
+      "config": {
+        "floors": 40,
+        "cars": 1,
+        "enabled": [
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "capacity": 8,
+        "speed": 1.5,
+        "doors": 4,
+        "demand": 5,
+        "pattern": "morning",
+        "seed": 42,
+        "waitWeight": 1,
+        "tailWeight": 2,
+        "rideWeight": 0.25
+      }
+    },
+    {
+      "name": "morning / 2 online",
+      "config": {
+        "floors": 40,
+        "cars": 2,
+        "enabled": [
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "capacity": 8,
+        "speed": 1.5,
+        "doors": 4,
+        "demand": 5,
+        "pattern": "morning",
+        "seed": 42,
+        "waitWeight": 1,
+        "tailWeight": 2,
+        "rideWeight": 0.25
+      }
+    },
+    {
+      "name": "morning / 3 online",
+      "config": {
+        "floors": 40,
+        "cars": 3,
+        "enabled": [
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "capacity": 8,
+        "speed": 1.5,
+        "doors": 4,
+        "demand": 5,
+        "pattern": "morning",
+        "seed": 42,
+        "waitWeight": 1,
+        "tailWeight": 2,
+        "rideWeight": 0.25
+      }
+    },
+    {
+      "name": "morning / 5 online",
+      "config": {
+        "floors": 40,
+        "cars": 5,
+        "enabled": [
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "capacity": 8,
+        "speed": 1.5,
+        "doors": 4,
+        "demand": 5,
+        "pattern": "morning",
+        "seed": 42,
+        "waitWeight": 1,
+        "tailWeight": 2,
+        "rideWeight": 0.25
+      }
+    },
+    {
+      "name": "evening / 1 online",
+      "config": {
+        "floors": 40,
+        "cars": 1,
+        "enabled": [
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "capacity": 8,
+        "speed": 1.5,
+        "doors": 4,
+        "demand": 5,
+        "pattern": "evening",
+        "seed": 42,
+        "waitWeight": 1,
+        "tailWeight": 2,
+        "rideWeight": 0.25
+      }
+    },
+    {
+      "name": "evening / 2 online",
+      "config": {
+        "floors": 40,
+        "cars": 2,
+        "enabled": [
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "capacity": 8,
+        "speed": 1.5,
+        "doors": 4,
+        "demand": 5,
+        "pattern": "evening",
+        "seed": 42,
+        "waitWeight": 1,
+        "tailWeight": 2,
+        "rideWeight": 0.25
+      }
+    },
+    {
+      "name": "evening / 3 online",
+      "config": {
+        "floors": 40,
+        "cars": 3,
+        "enabled": [
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "capacity": 8,
+        "speed": 1.5,
+        "doors": 4,
+        "demand": 5,
+        "pattern": "evening",
+        "seed": 42,
+        "waitWeight": 1,
+        "tailWeight": 2,
+        "rideWeight": 0.25
+      }
+    },
+    {
+      "name": "evening / 5 online",
+      "config": {
+        "floors": 40,
+        "cars": 5,
+        "enabled": [
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "capacity": 8,
+        "speed": 1.5,
+        "doors": 4,
+        "demand": 5,
+        "pattern": "evening",
+        "seed": 42,
+        "waitWeight": 1,
+        "tailWeight": 2,
+        "rideWeight": 0.25
+      }
+    },
+    {
+      "name": "mixed / 1 online",
+      "config": {
+        "floors": 40,
+        "cars": 1,
+        "enabled": [
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "capacity": 8,
+        "speed": 1.5,
+        "doors": 4,
+        "demand": 5,
+        "pattern": "mixed",
+        "seed": 42,
+        "waitWeight": 1,
+        "tailWeight": 2,
+        "rideWeight": 0.25
+      }
+    },
+    {
+      "name": "mixed / 2 online",
+      "config": {
+        "floors": 40,
+        "cars": 2,
+        "enabled": [
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "capacity": 8,
+        "speed": 1.5,
+        "doors": 4,
+        "demand": 5,
+        "pattern": "mixed",
+        "seed": 42,
+        "waitWeight": 1,
+        "tailWeight": 2,
+        "rideWeight": 0.25
+      }
+    },
+    {
+      "name": "mixed / 3 online",
+      "config": {
+        "floors": 40,
+        "cars": 3,
+        "enabled": [
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "capacity": 8,
+        "speed": 1.5,
+        "doors": 4,
+        "demand": 5,
+        "pattern": "mixed",
+        "seed": 42,
+        "waitWeight": 1,
+        "tailWeight": 2,
+        "rideWeight": 0.25
+      }
+    },
+    {
+      "name": "mixed / 5 online",
+      "config": {
+        "floors": 40,
+        "cars": 5,
+        "enabled": [
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "capacity": 8,
+        "speed": 1.5,
+        "doors": 4,
+        "demand": 5,
+        "pattern": "mixed",
+        "seed": 42,
+        "waitWeight": 1,
+        "tailWeight": 2,
+        "rideWeight": 0.25
+      }
+    }
+  ],
+  "horizon": 360,
+  "planner": {
+    "horizon": 150,
+    "samples": 4,
+    "uncertainty": 1
+  },
+  "reference": {
+    "name": "PPO · trained reference",
+    "episode": 1360,
+    "seed": 209,
+    "learning": {
+      "alpha": 0.12,
+      "epsilon": 0.2,
+      "gamma": 0.99
+    },
+    "neural": {
+      "rate": 0.001,
+      "clip": 0.2,
+      "entropy": 0.01,
+      "batch": 32,
+      "epochs": 4,
+      "targetEvery": 100,
+      "pretrain": 100,
+      "seed": 209,
+      "variedTraffic": true
+    }
+  },
+  "results": [
+    {
+      "name": "LOOK",
+      "trials": 640,
+      "millisecondsPerTrial": 0.1501197921875,
+      "metrics": {
+        "waiting": 2.35,
+        "riding": 1.809375,
+        "delivered": 26.171875,
+        "meanWait": 22.309090254194654,
+        "p95": 52.23582787284499,
+        "longest": 60.04763321245203,
+        "cost": 33.87900901495043,
+        "distance": 666.1171875,
+        "score": -1.0707505147882435
+      },
+      "costReductionPercent": 0,
+      "costDifference": {
+        "mean": 0,
+        "se": 0,
+        "ci95": [
+          0,
+          0
+        ]
+      },
+      "people": 30.33125,
+      "unfinished": 4.159375,
+      "plannerFallbacks": 0,
+      "scenarios": [
+        {
+          "name": "night / 1 online",
+          "metrics": {
+            "waiting": 4.25,
+            "riding": 2.875,
+            "delivered": 24.8,
+            "meanWait": 40.84831355010212,
+            "p95": 94.70262604771,
+            "longest": 105.88173481916756,
+            "cost": 75.04642164144879,
+            "distance": 309.6,
+            "score": -2.251158739586784
+          },
+          "costReductionPercent": 0,
+          "costDifference": {
+            "mean": 0,
+            "se": 0,
+            "ci95": [
+              0,
+              0
+            ]
+          },
+          "people": 31.925,
+          "unfinished": 7.125,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "night / 2 online",
+          "metrics": {
+            "waiting": 1.9,
+            "riding": 1.85,
+            "delivered": 28.175,
+            "meanWait": 18.022754076233134,
+            "p95": 46.57095144285362,
+            "longest": 53.99837980898599,
+            "cost": 23.984418376144816,
+            "distance": 647.5875,
+            "score": -0.7178263910281639
+          },
+          "costReductionPercent": 0,
+          "costDifference": {
+            "mean": 0,
+            "se": 0,
+            "ci95": [
+              0,
+              0
+            ]
+          },
+          "people": 31.925,
+          "unfinished": 3.75,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "night / 3 online",
+          "metrics": {
+            "waiting": 1.025,
+            "riding": 1.275,
+            "delivered": 29.625,
+            "meanWait": 10.095880429292613,
+            "p95": 27.946004273896364,
+            "longest": 34.42446433421125,
+            "cost": 11.908042944805716,
+            "distance": 810.5125,
+            "score": -0.36168318648275255
+          },
+          "costReductionPercent": 0,
+          "costDifference": {
+            "mean": 0,
+            "se": 0,
+            "ci95": [
+              0,
+              0
+            ]
+          },
+          "people": 31.925,
+          "unfinished": 2.3,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "night / 5 online",
+          "metrics": {
+            "waiting": 0.675,
+            "riding": 1.325,
+            "delivered": 29.925,
+            "meanWait": 8.193785512195369,
+            "p95": 23.632608403275952,
+            "longest": 26.611281993189852,
+            "cost": 9.253670415813602,
+            "distance": 919.6,
+            "score": -0.2878461348741045
+          },
+          "costReductionPercent": 0,
+          "costDifference": {
+            "mean": 0,
+            "se": 0,
+            "ci95": [
+              0,
+              0
+            ]
+          },
+          "people": 31.925,
+          "unfinished": 2,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "morning / 1 online",
+          "metrics": {
+            "waiting": 5.975,
+            "riding": 1.925,
+            "delivered": 22.475,
+            "meanWait": 40.55478223730035,
+            "p95": 93.00962837932758,
+            "longest": 105.08917294588801,
+            "cost": 75.03278749409034,
+            "distance": 308.65,
+            "score": -2.296142977593624
+          },
+          "costReductionPercent": 0,
+          "costDifference": {
+            "mean": 0,
+            "se": 0,
+            "ci95": [
+              0,
+              0
+            ]
+          },
+          "people": 30.375,
+          "unfinished": 7.8999999999999995,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "morning / 2 online",
+          "metrics": {
+            "waiting": 1.725,
+            "riding": 2,
+            "delivered": 26.65,
+            "meanWait": 16.166603719995994,
+            "p95": 41.12314434570951,
+            "longest": 51.234433569208264,
+            "cost": 19.246689841305113,
+            "distance": 610.1125,
+            "score": -0.6171012075924102
+          },
+          "costReductionPercent": 0,
+          "costDifference": {
+            "mean": 0,
+            "se": 0,
+            "ci95": [
+              0,
+              0
+            ]
+          },
+          "people": 30.375,
+          "unfinished": 3.725,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "morning / 3 online",
+          "metrics": {
+            "waiting": 1.275,
+            "riding": 2,
+            "delivered": 27.1,
+            "meanWait": 12.075647717930401,
+            "p95": 27.63359519250752,
+            "longest": 33.22547644651892,
+            "cost": 12.95862865656871,
+            "distance": 750.8125,
+            "score": -0.41916999612120937
+          },
+          "costReductionPercent": 0,
+          "costDifference": {
+            "mean": 0,
+            "se": 0,
+            "ci95": [
+              0,
+              0
+            ]
+          },
+          "people": 30.375,
+          "unfinished": 3.275,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "morning / 5 online",
+          "metrics": {
+            "waiting": 1.375,
+            "riding": 1.625,
+            "delivered": 27.375,
+            "meanWait": 10.884899448635085,
+            "p95": 25.07740214095734,
+            "longest": 26.694471407952257,
+            "cost": 11.287381037400792,
+            "distance": 785.325,
+            "score": -0.36897061588496605
+          },
+          "costReductionPercent": 0,
+          "costDifference": {
+            "mean": 0,
+            "se": 0,
+            "ci95": [
+              0,
+              0
+            ]
+          },
+          "people": 30.375,
+          "unfinished": 3,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "evening / 1 online",
+          "metrics": {
+            "waiting": 5.375,
+            "riding": 2.5,
+            "delivered": 22,
+            "meanWait": 47.890473845291524,
+            "p95": 119.57121508924396,
+            "longest": 141.713641125141,
+            "cost": 98.53259869001593,
+            "distance": 318.775,
+            "score": -3.051120293105854
+          },
+          "costReductionPercent": 0,
+          "costDifference": {
+            "mean": 0,
+            "se": 0,
+            "ci95": [
+              0,
+              0
+            ]
+          },
+          "people": 29.875,
+          "unfinished": 7.875,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "evening / 2 online",
+          "metrics": {
+            "waiting": 2.5,
+            "riding": 1.75,
+            "delivered": 25.625,
+            "meanWait": 24.117862524552084,
+            "p95": 52.88626392712949,
+            "longest": 60.33749367894146,
+            "cost": 28.970763290115904,
+            "distance": 683.6375,
+            "score": -0.9487010441914807
+          },
+          "costReductionPercent": 0,
+          "costDifference": {
+            "mean": 0,
+            "se": 0,
+            "ci95": [
+              0,
+              0
+            ]
+          },
+          "people": 29.875,
+          "unfinished": 4.25,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "evening / 3 online",
+          "metrics": {
+            "waiting": 1.55,
+            "riding": 1.625,
+            "delivered": 26.7,
+            "meanWait": 17.353398674985307,
+            "p95": 36.84152117193729,
+            "longest": 42.81995321018412,
+            "cost": 18.33862920970892,
+            "distance": 909.6375,
+            "score": -0.6009004914504686
+          },
+          "costReductionPercent": 0,
+          "costDifference": {
+            "mean": 0,
+            "se": 0,
+            "ci95": [
+              0,
+              0
+            ]
+          },
+          "people": 29.875,
+          "unfinished": 3.175,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "evening / 5 online",
+          "metrics": {
+            "waiting": 1.075,
+            "riding": 1.875,
+            "delivered": 26.925,
+            "meanWait": 13.912650074356739,
+            "p95": 26.572097515378555,
+            "longest": 29.11391440086325,
+            "cost": 13.466019888350932,
+            "distance": 1103.9125,
+            "score": -0.4495189708694657
+          },
+          "costReductionPercent": 0,
+          "costDifference": {
+            "mean": 0,
+            "se": 0,
+            "ci95": [
+              0,
+              0
+            ]
+          },
+          "people": 29.875,
+          "unfinished": 2.95,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "mixed / 1 online",
+          "metrics": {
+            "waiting": 5.225,
+            "riding": 2.15,
+            "delivered": 21.775,
+            "meanWait": 50.41467311380339,
+            "p95": 110.80299772777305,
+            "longest": 123.36670161654133,
+            "cost": 93.46240775237308,
+            "distance": 255.75,
+            "score": -3.0780554937615068
+          },
+          "costReductionPercent": 0,
+          "costDifference": {
+            "mean": 0,
+            "se": 0,
+            "ci95": [
+              0,
+              0
+            ]
+          },
+          "people": 29.15,
+          "unfinished": 7.375,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "mixed / 2 online",
+          "metrics": {
+            "waiting": 1.825,
+            "riding": 1.55,
+            "delivered": 25.775,
+            "meanWait": 22.74727834466043,
+            "p95": 52.673650505899914,
+            "longest": 60.940481567425365,
+            "cost": 27.82954329730539,
+            "distance": 606.5,
+            "score": -0.9145591448270182
+          },
+          "costReductionPercent": 0,
+          "costDifference": {
+            "mean": 0,
+            "se": 0,
+            "ci95": [
+              0,
+              0
+            ]
+          },
+          "people": 29.15,
+          "unfinished": 3.375,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "mixed / 3 online",
+          "metrics": {
+            "waiting": 1.075,
+            "riding": 1.35,
+            "delivered": 26.725,
+            "meanWait": 13.312158024355483,
+            "p95": 32.50083501612916,
+            "longest": 38.566691137632404,
+            "cost": 13.25360596799336,
+            "distance": 772.675,
+            "score": -0.4440679067667346
+          },
+          "costReductionPercent": 0,
+          "costDifference": {
+            "mean": 0,
+            "se": 0,
+            "ci95": [
+              0,
+              0
+            ]
+          },
+          "people": 29.15,
+          "unfinished": 2.425,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "mixed / 5 online",
+          "metrics": {
+            "waiting": 0.775,
+            "riding": 1.275,
+            "delivered": 27.1,
+            "meanWait": 10.35428277342458,
+            "p95": 24.22870478579038,
+            "longest": 26.743839337381342,
+            "cost": 9.492535735766419,
+            "distance": 864.7875,
+            "score": -0.3251856424753502
+          },
+          "costReductionPercent": 0,
+          "costDifference": {
+            "mean": 0,
+            "se": 0,
+            "ci95": [
+              0,
+              0
+            ]
+          },
+          "people": 29.15,
+          "unfinished": 2.05,
+          "plannerFallbacks": 0
+        }
+      ]
+    },
+    {
+      "name": "Previous planner (45s, 2 samples)",
+      "trials": 640,
+      "millisecondsPerTrial": 2.3532380859375,
+      "metrics": {
+        "waiting": 2.3734375,
+        "riding": 2.9671875,
+        "delivered": 24.990625,
+        "meanWait": 19.494837534349642,
+        "p95": 46.325987048330305,
+        "longest": 56.041496951161854,
+        "cost": 31.710205337339506,
+        "distance": 664.9109375,
+        "score": -0.9944248633990245
+      },
+      "costReductionPercent": 7.128238589202406,
+      "costDifference": {
+        "mean": -0.07632565138921818,
+        "se": 0.021362723422112293,
+        "ci95": [
+          -0.11954244087215135,
+          -0.03310886190628501
+        ]
+      },
+      "people": 30.33125,
+      "unfinished": 5.340625,
+      "plannerFallbacks": 0,
+      "scenarios": [
+        {
+          "name": "night / 1 online",
+          "metrics": {
+            "waiting": 6.225,
+            "riding": 5.275,
+            "delivered": 20.425,
+            "meanWait": 43.31843803074675,
+            "p95": 112.89643576181035,
+            "longest": 147.83817985424201,
+            "cost": 97.05284974287203,
+            "distance": 348.425,
+            "score": -2.884523525206704
+          },
+          "costReductionPercent": -28.135056603612885,
+          "costDifference": {
+            "mean": 0.6333647856199202,
+            "se": 0.18625275413869807,
+            "ci95": [
+              0.25657546399733394,
+              1.0101541072425064
+            ]
+          },
+          "people": 31.925,
+          "unfinished": 11.5,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "night / 2 online",
+          "metrics": {
+            "waiting": 1.125,
+            "riding": 2.375,
+            "delivered": 28.425,
+            "meanWait": 13.94689665135223,
+            "p95": 35.24106788608329,
+            "longest": 46.56650185072907,
+            "cost": 18.307078460674177,
+            "distance": 654.8625,
+            "score": -0.5565521979685119
+          },
+          "costReductionPercent": 22.467019195080624,
+          "costDifference": {
+            "mean": -0.16127419305965232,
+            "se": 0.03392479233942537,
+            "ci95": [
+              -0.22990404796230984,
+              -0.09264433815699478
+            ]
+          },
+          "people": 31.925,
+          "unfinished": 3.5,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "night / 3 online",
+          "metrics": {
+            "waiting": 0.925,
+            "riding": 1.475,
+            "delivered": 29.525,
+            "meanWait": 9.418892544833817,
+            "p95": 24.76101677974983,
+            "longest": 29.569409339969656,
+            "cost": 10.983524154507759,
+            "distance": 818.075,
+            "score": -0.3380625352299849
+          },
+          "costReductionPercent": 6.53075734110577,
+          "costDifference": {
+            "mean": -0.023620651252767622,
+            "se": 0.009613301542129533,
+            "ci95": [
+              -0.043068360272495665,
+              -0.004172942233039576
+            ]
+          },
+          "people": 31.925,
+          "unfinished": 2.4000000000000004,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "night / 5 online",
+          "metrics": {
+            "waiting": 0.75,
+            "riding": 1.2,
+            "delivered": 29.975,
+            "meanWait": 7.97121457394814,
+            "p95": 23.20364989130362,
+            "longest": 25.584018305785627,
+            "cost": 9.057741831100062,
+            "distance": 924.5375,
+            "score": -0.2823267492836948
+          },
+          "costReductionPercent": 1.9174777499874114,
+          "costDifference": {
+            "mean": -0.005519385590409619,
+            "se": 0.004564954079421647,
+            "ci95": [
+              -0.01475428769307961,
+              0.0037155165122603733
+            ]
+          },
+          "people": 31.925,
+          "unfinished": 1.95,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "morning / 1 online",
+          "metrics": {
+            "waiting": 7.4,
+            "riding": 6.65,
+            "delivered": 16.325,
+            "meanWait": 33.58716571124551,
+            "p95": 84.95990652469594,
+            "longest": 95.51267400980763,
+            "cost": 73.81321640673131,
+            "distance": 324.1875,
+            "score": -2.1799881017245504
+          },
+          "costReductionPercent": 5.058695255589215,
+          "costDifference": {
+            "mean": -0.11615487586907343,
+            "se": 0.13753153353415737,
+            "ci95": [
+              -0.3943811682086738,
+              0.16207141647052697
+            ]
+          },
+          "people": 30.375,
+          "unfinished": 14.05,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "morning / 2 online",
+          "metrics": {
+            "waiting": 0.925,
+            "riding": 3.725,
+            "delivered": 25.725,
+            "meanWait": 11.56697078671914,
+            "p95": 28.698734863855616,
+            "longest": 32.45084643479547,
+            "cost": 13.465860262781757,
+            "distance": 587.425,
+            "score": -0.44036733886594764
+          },
+          "costReductionPercent": 28.63936523734591,
+          "costDifference": {
+            "mean": -0.17673386872646252,
+            "se": 0.021251113219791357,
+            "ci95": [
+              -0.21972487077010044,
+              -0.1337428666828246
+            ]
+          },
+          "people": 30.375,
+          "unfinished": 4.65,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "morning / 3 online",
+          "metrics": {
+            "waiting": 1.25,
+            "riding": 2.05,
+            "delivered": 27.075,
+            "meanWait": 10.980002799271851,
+            "p95": 25.42601876599067,
+            "longest": 27.464793850054598,
+            "cost": 11.7354131662071,
+            "distance": 740.4375,
+            "score": -0.3822230299299433
+          },
+          "costReductionPercent": 8.81431556007227,
+          "costDifference": {
+            "mean": -0.03694696619126595,
+            "se": 0.008077961832101861,
+            "ci95": [
+              -0.05328868297760802,
+              -0.020605249404923885
+            ]
+          },
+          "people": 30.375,
+          "unfinished": 3.3,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "morning / 5 online",
+          "metrics": {
+            "waiting": 1.35,
+            "riding": 1.625,
+            "delivered": 27.4,
+            "meanWait": 10.543182062967814,
+            "p95": 25.095125159299123,
+            "longest": 26.294078400318472,
+            "cost": 11.01633319815812,
+            "distance": 788.825,
+            "score": -0.3602735182973217
+          },
+          "costReductionPercent": 2.3571247175834342,
+          "costDifference": {
+            "mean": -0.008697097587644354,
+            "se": 0.003263737811007297,
+            "ci95": [
+              -0.015299639179312118,
+              -0.0020945559959765917
+            ]
+          },
+          "people": 30.375,
+          "unfinished": 2.975,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "evening / 1 online",
+          "metrics": {
+            "waiting": 5.725,
+            "riding": 5.1,
+            "delivered": 19.05,
+            "meanWait": 38.91348864139861,
+            "p95": 86.30238707807167,
+            "longest": 102.09092832469834,
+            "cost": 72.21444258108794,
+            "distance": 338.9375,
+            "score": -2.2138406635632952
+          },
+          "costReductionPercent": 27.44171153901832,
+          "costDifference": {
+            "mean": -0.8372796295425589,
+            "se": 0.13035485020959575,
+            "ci95": [
+              -1.1009874915165712,
+              -0.5735717675685466
+            ]
+          },
+          "people": 29.875,
+          "unfinished": 10.825,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "evening / 2 online",
+          "metrics": {
+            "waiting": 1.375,
+            "riding": 2.95,
+            "delivered": 25.55,
+            "meanWait": 16.40564090082288,
+            "p95": 32.53691297333849,
+            "longest": 39.06175784747935,
+            "cost": 18.34514187133044,
+            "distance": 644.1125,
+            "score": -0.6061173555821366
+          },
+          "costReductionPercent": 36.11081601594599,
+          "costDifference": {
+            "mean": -0.3425836886093441,
+            "se": 0.03604677074743911,
+            "ci95": [
+              -0.4155063058314134,
+              -0.26966107138727474
+            ]
+          },
+          "people": 29.875,
+          "unfinished": 4.325,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "evening / 3 online",
+          "metrics": {
+            "waiting": 1.05,
+            "riding": 2.2,
+            "delivered": 26.625,
+            "meanWait": 14.205667792060183,
+            "p95": 26.727105845118444,
+            "longest": 31.10322025776029,
+            "cost": 14.380023816028688,
+            "distance": 869.1,
+            "score": -0.478785800978177
+          },
+          "costReductionPercent": 20.321948843398037,
+          "costDifference": {
+            "mean": -0.12211469047229151,
+            "se": 0.016652821212962878,
+            "ci95": [
+              -0.15580334778611543,
+              -0.0884260331584676
+            ]
+          },
+          "people": 29.875,
+          "unfinished": 3.25,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "evening / 5 online",
+          "metrics": {
+            "waiting": 0.95,
+            "riding": 2.05,
+            "delivered": 26.875,
+            "meanWait": 13.306801409772413,
+            "p95": 25.719781767756295,
+            "longest": 26.849694773956834,
+            "cost": 12.880816660663678,
+            "distance": 1084.1,
+            "score": -0.4314685613123753
+          },
+          "costReductionPercent": 4.015494501194692,
+          "costDifference": {
+            "mean": -0.018050409557090273,
+            "se": 0.003747848743006361,
+            "ci95": [
+              -0.02563230756419214,
+              -0.010468511549988405
+            ]
+          },
+          "people": 29.875,
+          "unfinished": 3,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "mixed / 1 online",
+          "metrics": {
+            "waiting": 6.125,
+            "riding": 5.2,
+            "delivered": 17.825,
+            "meanWait": 49.558089913921314,
+            "p95": 121.94084688026537,
+            "longest": 164.5689103493501,
+            "cost": 104.53379839561971,
+            "distance": 295.9375,
+            "score": -3.4214820155027796
+          },
+          "costReductionPercent": -11.157255690721545,
+          "costDifference": {
+            "mean": 0.3434265217412727,
+            "se": 0.1678906755093132,
+            "ci95": [
+              0.003783685185932084,
+              0.6830693582966133
+            ]
+          },
+          "people": 29.15,
+          "unfinished": 11.325,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "mixed / 2 online",
+          "metrics": {
+            "waiting": 1.075,
+            "riding": 2.825,
+            "delivered": 25.25,
+            "meanWait": 16.318362196147238,
+            "p95": 37.397742147562624,
+            "longest": 45.77461817364487,
+            "cost": 18.707790425385703,
+            "distance": 593.875,
+            "score": -0.6235191027323903
+          },
+          "costReductionPercent": 31.822987473344423,
+          "costDifference": {
+            "mean": -0.29104004209462764,
+            "se": 0.04182184118459228,
+            "ci95": [
+              -0.37564562681105784,
+              -0.20643445737819746
+            ]
+          },
+          "people": 29.15,
+          "unfinished": 3.9000000000000004,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "mixed / 3 online",
+          "metrics": {
+            "waiting": 1.05,
+            "riding": 1.425,
+            "delivered": 26.675,
+            "meanWait": 11.873794772599322,
+            "p95": 26.77181026719263,
+            "longest": 30.48412368036283,
+            "cost": 11.707002944702506,
+            "distance": 768.525,
+            "score": -0.3959008458024992
+          },
+          "costReductionPercent": 10.846778213481025,
+          "costDifference": {
+            "mean": -0.048167060964235314,
+            "se": 0.01342400256601053,
+            "ci95": [
+              -0.07532381815527461,
+              -0.02101030377319601
+            ]
+          },
+          "people": 29.15,
+          "unfinished": 2.475,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "mixed / 5 online",
+          "metrics": {
+            "waiting": 0.675,
+            "riding": 1.35,
+            "delivered": 27.125,
+            "meanWait": 10.002791761787,
+            "p95": 23.537250181190373,
+            "longest": 25.45019576563518,
+            "cost": 9.162251479582292,
+            "distance": 857.2125,
+            "score": -0.3153664724040898
+          },
+          "costReductionPercent": 3.0195583041476652,
+          "costDifference": {
+            "mean": -0.009819170071260408,
+            "se": 0.004698722904660168,
+            "ci95": [
+              -0.019324686507387927,
+              -0.0003136536351328878
+            ]
+          },
+          "people": 29.15,
+          "unfinished": 2.0250000000000004,
+          "plannerFallbacks": 0
+        }
+      ]
+    },
+    {
+      "name": "Predictive planner",
+      "trials": 640,
+      "millisecondsPerTrial": 11.10047155,
+      "metrics": {
+        "waiting": 1.8078125,
+        "riding": 2.675,
+        "delivered": 25.8484375,
+        "meanWait": 18.41835373057789,
+        "p95": 43.0402454200006,
+        "longest": 49.736115388990285,
+        "cost": 25.995923226391312,
+        "distance": 662.43125,
+        "score": -0.8288583412331055
+      },
+      "costReductionPercent": 22.590899580653073,
+      "costDifference": {
+        "mean": -0.24189217355513767,
+        "se": 0.014775423421908027,
+        "ci95": [
+          -0.2717828551376576,
+          -0.21200149197261772
+        ]
+      },
+      "people": 30.33125,
+      "unfinished": 4.4828125,
+      "plannerFallbacks": 0,
+      "scenarios": [
+        {
+          "name": "night / 1 online",
+          "metrics": {
+            "waiting": 3.55,
+            "riding": 4.3,
+            "delivered": 24.075,
+            "meanWait": 33.886388193666406,
+            "p95": 79.2380335225264,
+            "longest": 92.66432775513826,
+            "cost": 57.469947447855546,
+            "distance": 330.2625,
+            "score": -1.741730784417197
+          },
+          "costReductionPercent": 22.629588318729407,
+          "costDifference": {
+            "mean": -0.5094279551695859,
+            "se": 0.05784313816328289,
+            "ci95": [
+              -0.6264446236739072,
+              -0.39241128666526465
+            ]
+          },
+          "people": 31.925,
+          "unfinished": 7.85,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "night / 2 online",
+          "metrics": {
+            "waiting": 1.225,
+            "riding": 2.25,
+            "delivered": 28.45,
+            "meanWait": 14.204850329703362,
+            "p95": 36.056813637750494,
+            "longest": 41.82151194225805,
+            "cost": 17.77326342790469,
+            "distance": 644.15,
+            "score": -0.5425588680553768
+          },
+          "costReductionPercent": 24.416422294218844,
+          "costDifference": {
+            "mean": -0.17526752297278728,
+            "se": 0.03152290493907207,
+            "ci95": [
+              -0.23903835966453008,
+              -0.11149668628104448
+            ]
+          },
+          "people": 31.925,
+          "unfinished": 3.475,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "night / 3 online",
+          "metrics": {
+            "waiting": 0.9,
+            "riding": 1.375,
+            "delivered": 29.65,
+            "meanWait": 9.525017789993793,
+            "p95": 25.859043543655975,
+            "longest": 31.193650027735508,
+            "cost": 11.236069832989992,
+            "distance": 820.075,
+            "score": -0.3436947728477322
+          },
+          "costReductionPercent": 4.973527746742012,
+          "costDifference": {
+            "mean": -0.01798841363502036,
+            "se": 0.008581471462528373,
+            "ci95": [
+              -0.035348730403715264,
+              -0.0006280968663254609
+            ]
+          },
+          "people": 31.925,
+          "unfinished": 2.275,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "night / 5 online",
+          "metrics": {
+            "waiting": 0.725,
+            "riding": 1.325,
+            "delivered": 29.875,
+            "meanWait": 8.041263310775902,
+            "p95": 23.29194221031743,
+            "longest": 25.978804604461033,
+            "cost": 9.130442575010722,
+            "distance": 930.025,
+            "score": -0.2843818545734761
+          },
+          "costReductionPercent": 1.2035180886286947,
+          "costDifference": {
+            "mean": -0.003464280300628312,
+            "se": 0.004140863995210803,
+            "ci95": [
+              -0.011841248162939768,
+              0.004912687561683143
+            ]
+          },
+          "people": 31.925,
+          "unfinished": 2.05,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "morning / 1 online",
+          "metrics": {
+            "waiting": 4.075,
+            "riding": 5.15,
+            "delivered": 21.15,
+            "meanWait": 28.305494186343516,
+            "p95": 70.72819188571339,
+            "longest": 83.53685991110645,
+            "cost": 47.72538087070991,
+            "distance": 306.2,
+            "score": -1.4656864059770824
+          },
+          "costReductionPercent": 36.16745907029129,
+          "costDifference": {
+            "mean": -0.8304565716165417,
+            "se": 0.09357241331767271,
+            "ci95": [
+              -1.0197535637581936,
+              -0.6411595794748899
+            ]
+          },
+          "people": 30.375,
+          "unfinished": 9.225000000000001,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "morning / 2 online",
+          "metrics": {
+            "waiting": 1.3,
+            "riding": 2.825,
+            "delivered": 26.25,
+            "meanWait": 11.986984706328332,
+            "p95": 29.604119039219505,
+            "longest": 36.40753507257499,
+            "cost": 14.127992414285567,
+            "distance": 600.325,
+            "score": -0.45838949914019905
+          },
+          "costReductionPercent": 25.71891069074666,
+          "costDifference": {
+            "mean": -0.15871170845221103,
+            "se": 0.019047965813857284,
+            "ci95": [
+              -0.1972457432936443,
+              -0.12017767361077775
+            ]
+          },
+          "people": 30.375,
+          "unfinished": 4.125,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "morning / 3 online",
+          "metrics": {
+            "waiting": 1.05,
+            "riding": 2.1,
+            "delivered": 27.225,
+            "meanWait": 9.906104819049961,
+            "p95": 23.933832618852144,
+            "longest": 27.47417457847511,
+            "cost": 10.89023092501995,
+            "distance": 757.8375,
+            "score": -0.35617125067702415
+          },
+          "costReductionPercent": 15.029402396913966,
+          "costDifference": {
+            "mean": -0.06299874544418523,
+            "se": 0.010934930670737369,
+            "ci95": [
+              -0.08512011019108692,
+              -0.04087738069728353
+            ]
+          },
+          "people": 30.375,
+          "unfinished": 3.1500000000000004,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "morning / 5 online",
+          "metrics": {
+            "waiting": 1.2,
+            "riding": 1.85,
+            "delivered": 27.325,
+            "meanWait": 9.445163228622299,
+            "p95": 23.877020511458532,
+            "longest": 25.302309609453758,
+            "cost": 10.183296869391361,
+            "distance": 813.8375,
+            "score": -0.33335388430030755
+          },
+          "costReductionPercent": 9.652999466971844,
+          "costDifference": {
+            "mean": -0.03561673158465849,
+            "se": 0.005214876365491585,
+            "ci95": [
+              -0.04616642647204797,
+              -0.025067036697269007
+            ]
+          },
+          "people": 30.375,
+          "unfinished": 3.05,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "evening / 1 online",
+          "metrics": {
+            "waiting": 4.025,
+            "riding": 4.2,
+            "delivered": 21.65,
+            "meanWait": 38.6946299297897,
+            "p95": 88.26384818943585,
+            "longest": 102.52910635462406,
+            "cost": 68.04791141796915,
+            "distance": 317.2,
+            "score": -2.1119011044756073
+          },
+          "costReductionPercent": 30.78276496513282,
+          "costDifference": {
+            "mean": -0.9392191886302463,
+            "se": 0.12084604812688826,
+            "ci95": [
+              -1.1836907439909412,
+              -0.6947476332695514
+            ]
+          },
+          "people": 29.875,
+          "unfinished": 8.225000000000001,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "evening / 2 online",
+          "metrics": {
+            "waiting": 1.375,
+            "riding": 2.925,
+            "delivered": 25.575,
+            "meanWait": 17.775584196522452,
+            "p95": 37.83159213433593,
+            "longest": 43.70548395217879,
+            "cost": 19.802464490085605,
+            "distance": 650.3125,
+            "score": -0.653305164478629
+          },
+          "costReductionPercent": 31.136877261961843,
+          "costDifference": {
+            "mean": -0.2953958797128518,
+            "se": 0.03372644706683559,
+            "ci95": [
+              -0.36362448212906023,
+              -0.22716727729664338
+            ]
+          },
+          "people": 29.875,
+          "unfinished": 4.3,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "evening / 3 online",
+          "metrics": {
+            "waiting": 1.05,
+            "riding": 2.4,
+            "delivered": 26.425,
+            "meanWait": 14.479733631588095,
+            "p95": 28.456370695859526,
+            "longest": 33.37178881156072,
+            "cost": 14.75412576638659,
+            "distance": 867.45,
+            "score": -0.48950343264157653
+          },
+          "costReductionPercent": 18.53835375304805,
+          "costDifference": {
+            "mean": -0.11139705880889202,
+            "se": 0.013191627126380903,
+            "ci95": [
+              -0.13808372048556058,
+              -0.08471039713222345
+            ]
+          },
+          "people": 29.875,
+          "unfinished": 3.45,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "evening / 5 online",
+          "metrics": {
+            "waiting": 0.95,
+            "riding": 2.025,
+            "delivered": 26.9,
+            "meanWait": 13.313549663765817,
+            "p95": 25.7442520097588,
+            "longest": 26.86696468786141,
+            "cost": 12.874788529129987,
+            "distance": 1082.825,
+            "score": -0.4311639772929371
+          },
+          "costReductionPercent": 4.083252268758782,
+          "costDifference": {
+            "mean": -0.018354993576528422,
+            "se": 0.004000280437971341,
+            "ci95": [
+              -0.026447560902544444,
+              -0.010262426250512399
+            ]
+          },
+          "people": 29.875,
+          "unfinished": 2.9749999999999996,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "mixed / 1 online",
+          "metrics": {
+            "waiting": 4.6,
+            "riding": 4.85,
+            "delivered": 19.7,
+            "meanWait": 44.869705494610415,
+            "p95": 102.7001522127822,
+            "longest": 115.39068559140765,
+            "cost": 80.41485923570659,
+            "distance": 273.025,
+            "score": -2.6516252846766775
+          },
+          "costReductionPercent": 13.853883074853682,
+          "costDifference": {
+            "mean": -0.42643020908483054,
+            "se": 0.06596199663641564,
+            "ci95": [
+              -0.5598713282802994,
+              -0.2929890898893617
+            ]
+          },
+          "people": 29.15,
+          "unfinished": 9.45,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "mixed / 2 online",
+          "metrics": {
+            "waiting": 1.175,
+            "riding": 2.55,
+            "delivered": 25.425,
+            "meanWait": 18.121574631700263,
+            "p95": 41.56105981414758,
+            "longest": 50.60082336573597,
+            "cost": 20.430914724468586,
+            "distance": 593.5125,
+            "score": -0.680772797902516
+          },
+          "costReductionPercent": 25.562736783821787,
+          "costDifference": {
+            "mean": -0.23378634692450198,
+            "se": 0.039689486956800274,
+            "ci95": [
+              -0.314078179038109,
+              -0.15349451481089502
+            ]
+          },
+          "people": 29.15,
+          "unfinished": 3.7249999999999996,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "mixed / 3 online",
+          "metrics": {
+            "waiting": 1,
+            "riding": 1.45,
+            "delivered": 26.7,
+            "meanWait": 12.14313720956917,
+            "p95": 27.610650816907402,
+            "longest": 32.55907474197774,
+            "cost": 11.905953178459852,
+            "distance": 758.525,
+            "score": -0.40225601323122284
+          },
+          "costReductionPercent": 9.415653078815083,
+          "costDifference": {
+            "mean": -0.04181189353551162,
+            "se": 0.01039885036953659,
+            "ci95": [
+              -0.06284876783308414,
+              -0.020775019237939094
+            ]
+          },
+          "people": 29.15,
+          "unfinished": 2.45,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "mixed / 5 online",
+          "metrics": {
+            "waiting": 0.725,
+            "riding": 1.225,
+            "delivered": 27.2,
+            "meanWait": 9.994478367217123,
+            "p95": 23.887003877288404,
+            "longest": 26.374745217295338,
+            "cost": 9.167129916887053,
+            "distance": 853.3375,
+            "score": -0.3152383650421289
+          },
+          "costReductionPercent": 3.0589534511737706,
+          "costDifference": {
+            "mean": -0.009947277433221375,
+            "se": 0.0035421999372690386,
+            "ci95": [
+              -0.017113147906316642,
+              -0.002781406960126109
+            ]
+          },
+          "people": 29.15,
+          "unfinished": 1.9500000000000002,
+          "plannerFallbacks": 0
+        }
+      ]
+    },
+    {
+      "name": "PPO · trained reference",
+      "trials": 640,
+      "millisecondsPerTrial": 0.4319904296874995,
+      "metrics": {
+        "waiting": 2.071875,
+        "riding": 2.328125,
+        "delivered": 25.93125,
+        "meanWait": 19.7141193524357,
+        "p95": 49.819606544231284,
+        "longest": 59.26880271211284,
+        "cost": 30.41528176212886,
+        "distance": 654.340625,
+        "score": -0.9648769971315856
+      },
+      "costReductionPercent": 9.887785828204425,
+      "costDifference": {
+        "mean": -0.10587351765665672,
+        "se": 0.013645232279170083,
+        "ci95": [
+          -0.1334778225574178,
+          -0.07826921275589563
+        ]
+      },
+      "people": 30.33125,
+      "unfinished": 4.4,
+      "plannerFallbacks": 0,
+      "scenarios": [
+        {
+          "name": "night / 1 online",
+          "metrics": {
+            "waiting": 4.55,
+            "riding": 3.45,
+            "delivered": 23.925,
+            "meanWait": 38.757377041589955,
+            "p95": 105.32660699641924,
+            "longest": 126.50240125266649,
+            "cost": 80.22219866550239,
+            "distance": 311.2875,
+            "score": -2.358278932288866
+          },
+          "costReductionPercent": -4.75844687530763,
+          "costDifference": {
+            "mean": 0.10712019270208284,
+            "se": 0.15967889713646843,
+            "ci95": [
+              -0.21591021620499284,
+              0.4301506016091585
+            ]
+          },
+          "people": 31.925,
+          "unfinished": 8,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "night / 2 online",
+          "metrics": {
+            "waiting": 1.4,
+            "riding": 2.025,
+            "delivered": 28.5,
+            "meanWait": 15.461697095395621,
+            "p95": 41.67349762099525,
+            "longest": 51.046205404506644,
+            "cost": 19.915807312524784,
+            "distance": 642,
+            "score": -0.6068572878523995
+          },
+          "costReductionPercent": 15.459044772207406,
+          "costDifference": {
+            "mean": -0.11096910317576458,
+            "se": 0.033707491511171764,
+            "ci95": [
+              -0.17915935850286507,
+              -0.042778847848664106
+            ]
+          },
+          "people": 31.925,
+          "unfinished": 3.425,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "night / 3 online",
+          "metrics": {
+            "waiting": 1.025,
+            "riding": 1.325,
+            "delivered": 29.575,
+            "meanWait": 9.631516023404014,
+            "p95": 25.779857832001245,
+            "longest": 31.282616198081335,
+            "cost": 11.236061723044726,
+            "distance": 808.5375,
+            "score": -0.34403068718755947
+          },
+          "costReductionPercent": 4.880652448032683,
+          "costDifference": {
+            "mean": -0.017652499295192983,
+            "se": 0.010996207180010497,
+            "ci95": [
+              -0.03989782642035422,
+              0.0045928278299682546
+            ]
+          },
+          "people": 31.925,
+          "unfinished": 2.3499999999999996,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "night / 5 online",
+          "metrics": {
+            "waiting": 0.675,
+            "riding": 1.375,
+            "delivered": 29.875,
+            "meanWait": 8.169501285484184,
+            "p95": 23.545939108441374,
+            "longest": 25.634714263718926,
+            "cost": 9.242341803328795,
+            "distance": 918.3,
+            "score": -0.28741145171666915
+          },
+          "costReductionPercent": 0.15101233081536827,
+          "costDifference": {
+            "mean": -0.00043468315743530535,
+            "se": 0.0015069656495245876,
+            "ci95": [
+              -0.0034832746664235463,
+              0.002613908351552936
+            ]
+          },
+          "people": 31.925,
+          "unfinished": 2.05,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "morning / 1 online",
+          "metrics": {
+            "waiting": 4.7,
+            "riding": 3.525,
+            "delivered": 22.15,
+            "meanWait": 31.511005424899214,
+            "p95": 80.86367969931109,
+            "longest": 102.7894757301838,
+            "cost": 56.66246956802728,
+            "distance": 296.75,
+            "score": -1.7284185262468028
+          },
+          "costReductionPercent": 24.725135014971972,
+          "costDifference": {
+            "mean": -0.5677244513468207,
+            "se": 0.07785399642478112,
+            "ci95": [
+              -0.7252230861141529,
+              -0.4102258165794885
+            ]
+          },
+          "people": 30.375,
+          "unfinished": 8.225,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "morning / 2 online",
+          "metrics": {
+            "waiting": 1.5,
+            "riding": 2.325,
+            "delivered": 26.55,
+            "meanWait": 12.77971363727945,
+            "p95": 31.292276627552333,
+            "longest": 36.80030534045285,
+            "cost": 14.369447894994256,
+            "distance": 585.7625,
+            "score": -0.4704652032566842
+          },
+          "costReductionPercent": 23.76206731272154,
+          "costDifference": {
+            "mean": -0.14663600433572582,
+            "se": 0.021485705157643965,
+            "ci95": [
+              -0.19010158586963957,
+              -0.10317042280181207
+            ]
+          },
+          "people": 30.375,
+          "unfinished": 3.825,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "morning / 3 online",
+          "metrics": {
+            "waiting": 1.325,
+            "riding": 2,
+            "delivered": 27.05,
+            "meanWait": 11.53709263812193,
+            "p95": 25.94711606666068,
+            "longest": 28.823380960242382,
+            "cost": 12.17606778893855,
+            "distance": 737.9625,
+            "score": -0.3972389730883095
+          },
+          "costReductionPercent": 5.232011650604438,
+          "costDifference": {
+            "mean": -0.02193102303289986,
+            "se": 0.009168356194567571,
+            "ci95": [
+              -0.040478607614510054,
+              -0.0033834384512896644
+            ]
+          },
+          "people": 30.375,
+          "unfinished": 3.325,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "morning / 5 online",
+          "metrics": {
+            "waiting": 1.375,
+            "riding": 1.625,
+            "delivered": 27.375,
+            "meanWait": 10.869831881067519,
+            "p95": 25.009105544709836,
+            "longest": 26.546752288604683,
+            "cost": 11.27319755141021,
+            "distance": 781.2,
+            "score": -0.3687200705371012
+          },
+          "costReductionPercent": 0.0679038755603648,
+          "costDifference": {
+            "mean": -0.0002505453478648806,
+            "se": 0.0007976899237054569,
+            "ci95": [
+              -0.00186427206352102,
+              0.0013631813677912588
+            ]
+          },
+          "people": 30.375,
+          "unfinished": 3,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "evening / 1 online",
+          "metrics": {
+            "waiting": 4.325,
+            "riding": 4.05,
+            "delivered": 21.5,
+            "meanWait": 38.78031157091061,
+            "p95": 97.72718920562052,
+            "longest": 117.58209591173193,
+            "cost": 70.53139380664564,
+            "distance": 317.125,
+            "score": -2.2132487275818638
+          },
+          "costReductionPercent": 27.46111215009121,
+          "costDifference": {
+            "mean": -0.8378715655239899,
+            "se": 0.14411159439079707,
+            "ci95": [
+              -1.1294093209765723,
+              -0.5463338100714075
+            ]
+          },
+          "people": 29.875,
+          "unfinished": 8.375,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "evening / 2 online",
+          "metrics": {
+            "waiting": 1.45,
+            "riding": 2.875,
+            "delivered": 25.55,
+            "meanWait": 17.637781379872088,
+            "p95": 38.319566228258935,
+            "longest": 46.61141525144167,
+            "cost": 19.923096674902915,
+            "distance": 638.525,
+            "score": -0.6531054947617599
+          },
+          "costReductionPercent": 31.157923904430675,
+          "costDifference": {
+            "mean": -0.2955955494297207,
+            "se": 0.03731917371530146,
+            "ci95": [
+              -0.3710922378557756,
+              -0.22009886100366585
+            ]
+          },
+          "people": 29.875,
+          "unfinished": 4.325,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "evening / 3 online",
+          "metrics": {
+            "waiting": 1.325,
+            "riding": 1.925,
+            "delivered": 26.625,
+            "meanWait": 14.775935587664701,
+            "p95": 30.02955276164763,
+            "longest": 34.430004077249976,
+            "cost": 15.171623267658015,
+            "distance": 870.625,
+            "score": -0.5034917872832005
+          },
+          "costReductionPercent": 16.21045506755046,
+          "costDifference": {
+            "mean": -0.09740870416726798,
+            "se": 0.014915481575341085,
+            "ci95": [
+              -0.127582723394183,
+              -0.06723468494035295
+            ]
+          },
+          "people": 29.875,
+          "unfinished": 3.25,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "evening / 5 online",
+          "metrics": {
+            "waiting": 1.025,
+            "riding": 1.925,
+            "delivered": 26.925,
+            "meanWait": 13.429885692832851,
+            "p95": 25.606301155372165,
+            "longest": 27.288677125225348,
+            "cost": 13.00700704341258,
+            "distance": 1081.0375,
+            "score": -0.4348562016836041
+          },
+          "costReductionPercent": 3.2618799508062235,
+          "costDifference": {
+            "mean": -0.014662769185861447,
+            "se": 0.003127116854878414,
+            "ci95": [
+              -0.020988926583280478,
+              -0.008336611788442416
+            ]
+          },
+          "people": 29.875,
+          "unfinished": 2.95,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "mixed / 1 online",
+          "metrics": {
+            "waiting": 5.5,
+            "riding": 3.475,
+            "delivered": 20.175,
+            "meanWait": 50.06254254529837,
+            "p95": 141.35363988942692,
+            "longest": 168.59839407460183,
+            "cost": 107.05188979522407,
+            "distance": 268.075,
+            "score": -3.5481439604493756
+          },
+          "costReductionPercent": -15.272254435978411,
+          "costDifference": {
+            "mean": 0.4700884666878696,
+            "se": 0.14765077108131425,
+            "ci95": [
+              0.17139095679037086,
+              0.7687859765853683
+            ]
+          },
+          "people": 29.15,
+          "unfinished": 8.975,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "mixed / 2 online",
+          "metrics": {
+            "waiting": 1.4,
+            "riding": 2.2,
+            "delivered": 25.55,
+            "meanWait": 19.361238232030452,
+            "p95": 50.61360812769715,
+            "longest": 63.613863452301395,
+            "cost": 24.08639646261303,
+            "distance": 593.725,
+            "score": -0.7855019771324746
+          },
+          "costReductionPercent": 14.111407493383462,
+          "costDifference": {
+            "mean": -0.12905716769454362,
+            "se": 0.03857033505104935,
+            "ci95": [
+              -0.20708495550281647,
+              -0.05102937988627078
+            ]
+          },
+          "people": 29.15,
+          "unfinished": 3.6,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "mixed / 3 online",
+          "metrics": {
+            "waiting": 0.925,
+            "riding": 1.725,
+            "delivered": 26.5,
+            "meanWait": 12.55757863371004,
+            "p95": 29.93060865582085,
+            "longest": 34.281555657723395,
+            "cost": 12.461890594712735,
+            "distance": 766.875,
+            "score": -0.41878999143762974
+          },
+          "costReductionPercent": 5.692353566632126,
+          "costDifference": {
+            "mean": -0.025277915329104794,
+            "se": 0.010331630972473147,
+            "ci95": [
+              -0.04617880478641797,
+              -0.004377025871791618
+            ]
+          },
+          "people": 29.15,
+          "unfinished": 2.6500000000000004,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "mixed / 5 online",
+          "metrics": {
+            "waiting": 0.65,
+            "riding": 1.425,
+            "delivered": 27.075,
+            "meanWait": 10.102900969409946,
+            "p95": 24.095159187765038,
+            "longest": 26.468986405073043,
+            "cost": 9.313618241121912,
+            "distance": 851.6625,
+            "score": -0.3194726816010828
+          },
+          "costReductionPercent": 1.7568306001395744,
+          "costDifference": {
+            "mean": -0.005712960874267521,
+            "se": 0.0046278858638884,
+            "ci95": [
+              -0.015075173976913755,
+              0.003649252228378714
+            ]
+          },
+          "people": 29.15,
+          "unfinished": 2.075,
+          "plannerFallbacks": 0
+        }
+      ]
+    },
+    {
+      "name": "PDDL",
+      "trials": 640,
+      "millisecondsPerTrial": 41.406544467187494,
+      "metrics": {
+        "waiting": 2.721875,
+        "riding": 3.1578125,
+        "delivered": 24.4515625,
+        "meanWait": 20.76400333490609,
+        "p95": 53.26422968795881,
+        "longest": 63.88482580010424,
+        "cost": 38.44440001598954,
+        "distance": 666.903125,
+        "score": -1.1958100529802962
+      },
+      "costReductionPercent": -11.67961504242518,
+      "costDifference": {
+        "mean": 0.1250595381920538,
+        "se": 0.033730465867139285,
+        "ci95": [
+          0.05682280574283101,
+          0.19329627064127658
+        ]
+      },
+      "people": 30.33125,
+      "unfinished": 5.879687499999999,
+      "plannerFallbacks": 0,
+      "scenarios": [
+        {
+          "name": "night / 1 online",
+          "metrics": {
+            "waiting": 7.625,
+            "riding": 5.375,
+            "delivered": 18.925,
+            "meanWait": 48.971271242275364,
+            "p95": 150.09379838988713,
+            "longest": 196.58620090007153,
+            "cost": 137.05952183144257,
+            "distance": 347.925,
+            "score": -3.939871260019056
+          },
+          "costReductionPercent": -75.01525728666505,
+          "costDifference": {
+            "mean": 1.688712520432274,
+            "se": 0.3455656490637536,
+            "ci95": [
+              0.9896332123763004,
+              2.3877918284882473
+            ]
+          },
+          "people": 31.925,
+          "unfinished": 13,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "night / 2 online",
+          "metrics": {
+            "waiting": 1.4,
+            "riding": 3.075,
+            "delivered": 27.45,
+            "meanWait": 14.847164534739573,
+            "p95": 38.84682638478135,
+            "longest": 47.67457763967408,
+            "cost": 19.60520321136887,
+            "distance": 659.925,
+            "score": -0.5965532379900796
+          },
+          "costReductionPercent": 16.89449629518095,
+          "costDifference": {
+            "mean": -0.12127315303808461,
+            "se": 0.03031900301121211,
+            "ci95": [
+              -0.1826084961297667,
+              -0.05993780994640251
+            ]
+          },
+          "people": 31.925,
+          "unfinished": 4.475,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "night / 3 online",
+          "metrics": {
+            "waiting": 0.975,
+            "riding": 1.5,
+            "delivered": 29.45,
+            "meanWait": 9.595829354363676,
+            "p95": 25.580458918811267,
+            "longest": 31.465640204065693,
+            "cost": 11.335805914289136,
+            "distance": 816.8625,
+            "score": -0.34688679838627806
+          },
+          "costReductionPercent": 4.0909803522702815,
+          "costDifference": {
+            "mean": -0.014796388096474466,
+            "se": 0.011960430156741442,
+            "ci95": [
+              -0.038992338303562406,
+              0.009399562110613472
+            ]
+          },
+          "people": 31.925,
+          "unfinished": 2.475,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "night / 5 online",
+          "metrics": {
+            "waiting": 0.675,
+            "riding": 1.425,
+            "delivered": 29.825,
+            "meanWait": 8.184277909949762,
+            "p95": 23.600048651286478,
+            "longest": 25.749626920304685,
+            "cost": 9.271973380458252,
+            "distance": 917.9,
+            "score": -0.2881498252277307
+          },
+          "costReductionPercent": -0.10550440559468771,
+          "costDifference": {
+            "mean": 0.0003036903536261834,
+            "se": 0.001993966732851367,
+            "ci95": [
+              -0.003730104346932132,
+              0.004337485054184499
+            ]
+          },
+          "people": 31.925,
+          "unfinished": 2.1,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "morning / 1 online",
+          "metrics": {
+            "waiting": 7.975,
+            "riding": 6.675,
+            "delivered": 15.725,
+            "meanWait": 36.76027527497682,
+            "p95": 91.30671954890578,
+            "longest": 100.59096249422925,
+            "cost": 81.64461981258196,
+            "distance": 335.475,
+            "score": -2.4321931803456596
+          },
+          "costReductionPercent": -5.925162504236443,
+          "costDifference": {
+            "mean": 0.13605020275203555,
+            "se": 0.1525552785062388,
+            "ci95": [
+              -0.1725691256660855,
+              0.4446695311701566
+            ]
+          },
+          "people": 30.375,
+          "unfinished": 14.649999999999999,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "morning / 2 online",
+          "metrics": {
+            "waiting": 1.3,
+            "riding": 3.325,
+            "delivered": 25.75,
+            "meanWait": 11.640780451915417,
+            "p95": 27.79897965290766,
+            "longest": 32.42228153988559,
+            "cost": 13.665808461817473,
+            "distance": 594.5875,
+            "score": -0.44673562733840944
+          },
+          "costReductionPercent": 27.607396997110673,
+          "costDifference": {
+            "mean": -0.17036558025400061,
+            "se": 0.02117237006109034,
+            "ci95": [
+              -0.21319728488758638,
+              -0.12753387562041485
+            ]
+          },
+          "people": 30.375,
+          "unfinished": 4.625,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "morning / 3 online",
+          "metrics": {
+            "waiting": 1.35,
+            "riding": 2.2,
+            "delivered": 26.825,
+            "meanWait": 11.429695443223064,
+            "p95": 25.54910375574888,
+            "longest": 28.033309333291392,
+            "cost": 12.105808947864345,
+            "distance": 735.4625,
+            "score": -0.39537985418735383
+          },
+          "costReductionPercent": 5.67553549967738,
+          "costDifference": {
+            "mean": -0.02379014193385546,
+            "se": 0.009854631466178945,
+            "ci95": [
+              -0.04372606138993547,
+              -0.003854222477775452
+            ]
+          },
+          "people": 30.375,
+          "unfinished": 3.5500000000000003,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "morning / 5 online",
+          "metrics": {
+            "waiting": 1.325,
+            "riding": 1.6,
+            "delivered": 27.45,
+            "meanWait": 10.765950021505509,
+            "p95": 25.050727927612105,
+            "longest": 26.66879507141376,
+            "cost": 11.195721763519229,
+            "distance": 781.575,
+            "score": -0.36621422712437546
+          },
+          "costReductionPercent": 0.7470483127713206,
+          "costDifference": {
+            "mean": -0.0027563887605906376,
+            "se": 0.001535533924649957,
+            "ci95": [
+              -0.0058627738901575015,
+              0.00034999636897622586
+            ]
+          },
+          "people": 30.375,
+          "unfinished": 2.925,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "evening / 1 online",
+          "metrics": {
+            "waiting": 5.425,
+            "riding": 5.85,
+            "delivered": 18.6,
+            "meanWait": 36.05388708579696,
+            "p95": 80.5542197342946,
+            "longest": 95.01382598595072,
+            "cost": 67.37989189580335,
+            "distance": 335.2375,
+            "score": -2.037067904537498
+          },
+          "costReductionPercent": 33.235411624368055,
+          "costDifference": {
+            "mean": -1.0140523885683557,
+            "se": 0.11761251720379905,
+            "ci95": [
+              -1.2519825108716411,
+              -0.7761222662650702
+            ]
+          },
+          "people": 29.875,
+          "unfinished": 11.274999999999999,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "evening / 2 online",
+          "metrics": {
+            "waiting": 1.325,
+            "riding": 3.625,
+            "delivered": 24.925,
+            "meanWait": 16.249513535352182,
+            "p95": 32.92765626736887,
+            "longest": 38.2867163842816,
+            "cost": 18.449075082142137,
+            "distance": 651.475,
+            "score": -0.605059966777412
+          },
+          "costReductionPercent": 36.22227249754244,
+          "costDifference": {
+            "mean": -0.3436410774140686,
+            "se": 0.03507574427557203,
+            "ci95": [
+              -0.4145993080835508,
+              -0.27268284674458637
+            ]
+          },
+          "people": 29.875,
+          "unfinished": 4.95,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "evening / 3 online",
+          "metrics": {
+            "waiting": 1.025,
+            "riding": 2.525,
+            "delivered": 26.325,
+            "meanWait": 14.440835385526938,
+            "p95": 28.289179799194443,
+            "longest": 32.44109263768992,
+            "cost": 14.909541131134414,
+            "distance": 878.1,
+            "score": -0.4939773290703
+          },
+          "costReductionPercent": 17.79382175609057,
+          "costDifference": {
+            "mean": -0.1069231623801686,
+            "se": 0.015424975418228007,
+            "ci95": [
+              -0.13812788765124384,
+              -0.07571843710909333
+            ]
+          },
+          "people": 29.875,
+          "unfinished": 3.55,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "evening / 5 online",
+          "metrics": {
+            "waiting": 1.025,
+            "riding": 2,
+            "delivered": 26.85,
+            "meanWait": 13.385499465283834,
+            "p95": 25.73476191180135,
+            "longest": 27.45185178784497,
+            "cost": 13.006919832915916,
+            "distance": 1080.2375,
+            "score": -0.4351311367706588
+          },
+          "costReductionPercent": 3.2007178853826237,
+          "costDifference": {
+            "mean": -0.01438783409880684,
+            "se": 0.003244435418000629,
+            "ci95": [
+              -0.020951326949422113,
+              -0.007824341248191567
+            ]
+          },
+          "people": 29.875,
+          "unfinished": 3.025,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "mixed / 1 online",
+          "metrics": {
+            "waiting": 8.975,
+            "riding": 5.125,
+            "delivered": 15.05,
+            "meanWait": 60.50735785448391,
+            "p95": 181.6163854195422,
+            "longest": 224.40001568886146,
+            "cost": 162.61301841696775,
+            "distance": 318,
+            "score": -5.315902248229867
+          },
+          "costReductionPercent": -72.70326214078818,
+          "costDifference": {
+            "mean": 2.23784675446836,
+            "se": 0.39620553059965435,
+            "ci95": [
+              1.4363229660652592,
+              3.0393705428714606
+            ]
+          },
+          "people": 29.15,
+          "unfinished": 14.1,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "mixed / 2 online",
+          "metrics": {
+            "waiting": 1.475,
+            "riding": 2.975,
+            "delivered": 24.7,
+            "meanWait": 17.555962081545434,
+            "p95": 43.945459029695506,
+            "longest": 58.494174856012464,
+            "cost": 21.758403684613416,
+            "distance": 606.2625,
+            "score": -0.7170317932478912
+          },
+          "costReductionPercent": 21.598094852191075,
+          "costDifference": {
+            "mean": -0.1975273515791268,
+            "se": 0.046608037668365486,
+            "ci95": [
+              -0.2918154117822302,
+              -0.1032392913760234
+            ]
+          },
+          "people": 29.15,
+          "unfinished": 4.45,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "mixed / 3 online",
+          "metrics": {
+            "waiting": 0.95,
+            "riding": 1.775,
+            "delivered": 26.425,
+            "meanWait": 11.822372101133597,
+            "p95": 27.506463994642605,
+            "longest": 30.793617252432647,
+            "cost": 11.865465900570252,
+            "distance": 759.6125,
+            "score": -0.3994054512342957
+          },
+          "costReductionPercent": 10.05757336926843,
+          "costDifference": {
+            "mean": -0.04466245553243871,
+            "se": 0.011524033030402088,
+            "ci95": [
+              -0.06797557435294213,
+              -0.02134933671193528
+            ]
+          },
+          "people": 29.15,
+          "unfinished": 2.7249999999999996,
+          "plannerFallbacks": 0
+        },
+        {
+          "name": "mixed / 5 online",
+          "metrics": {
+            "waiting": 0.725,
+            "riding": 1.475,
+            "delivered": 26.95,
+            "meanWait": 10.013381616425402,
+            "p95": 23.826885620860185,
+            "longest": 26.084524105658137,
+            "cost": 9.243620988343565,
+            "distance": 851.8125,
+            "score": -0.3174010071978861
+          },
+          "costReductionPercent": 2.3939049763103193,
+          "costDifference": {
+            "mean": -0.007784635277464198,
+            "se": 0.0045229866108771185,
+            "ci95": [
+              -0.01693463719126861,
+              0.0013653666363402138
+            ]
+          },
+          "people": 29.15,
+          "unfinished": 2.2,
+          "plannerFallbacks": 0
+        }
+      ]
+    }
+  ]
+}
