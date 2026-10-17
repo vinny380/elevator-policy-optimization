@@ -1,0 +1,75 @@
+{
+  "description": "Development validation used to choose the bundled PPO reference. Not the final test suite. Four traffic patterns, one or three online cars, 12 seeds per scenario.",
+  "seeds": [
+    -660001,
+    -660002,
+    -660003,
+    -660004,
+    -660005,
+    -660006,
+    -660007,
+    -660008,
+    -660009,
+    -660010,
+    -660011,
+    -660012
+  ],
+  "totalEpisodesPerRun": 2100,
+  "ppoImitationEpisodes": 100,
+  "rows": [
+    {
+      "algorithm": "ddqn",
+      "seed": 7,
+      "best": -1.3518174174368764,
+      "at": 1980,
+      "validation": -1.5123522800186497,
+      "baseline": -1.5794986460761875,
+      "improvement": 4.2511189372870755
+    },
+    {
+      "algorithm": "ddqn",
+      "seed": 108,
+      "best": -1.32260287682462,
+      "at": 440,
+      "validation": -1.5892834176533832,
+      "baseline": -1.5794986460761875,
+      "improvement": -0.6194859110201311
+    },
+    {
+      "algorithm": "ddqn",
+      "seed": 209,
+      "best": -1.3345204406348237,
+      "at": 240,
+      "validation": -1.5255067901563997,
+      "baseline": -1.5794986460761875,
+      "improvement": 3.41829073762837
+    },
+    {
+      "algorithm": "ppo",
+      "seed": 7,
+      "best": -1.2784647021911075,
+      "at": 880,
+      "validation": -1.4700998790359874,
+      "baseline": -1.5794986460761875,
+      "improvement": 6.926170358674891
+    },
+    {
+      "algorithm": "ppo",
+      "seed": 108,
+      "best": -1.2334210970225832,
+      "at": 1300,
+      "validation": -1.6147503672144718,
+      "baseline": -1.5794986460761875,
+      "improvement": -2.231829778762847
+    },
+    {
+      "algorithm": "ppo",
+      "seed": 209,
+      "best": -1.2741105554819832,
+      "at": 1360,
+      "validation": -1.416679585526043,
+      "baseline": -1.5794986460761875,
+      "improvement": 10.308274777862069
+    }
+  ]
+}

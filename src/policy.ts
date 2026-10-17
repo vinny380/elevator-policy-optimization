@@ -8,30 +8,46 @@ export interface Policy { algorithm: Algorithm; q: QTable; network?: Network }
 export const ACTIONS = 46 * 3;
 // Each floor has onboard destination, upward call and downward call actions.
 export function actionId(stop: Stop) { return (stop.floor + 5) * 3 + (stop.inside ? 0 : stop.direction > 0 ? 1 : 2); }
-export function observe(sim: Simulation, selected: Car) {
-  const x: number[] = [];
-  const waiting = sim.waiting();
-  for (let floor = -5; floor <= 40; floor++) {
-    x.push(Number(floor <= sim.config.floors));
-    for (const direction of [1, -1]) {
-      const queue = waiting.filter(p => p.from === floor && Math.sign(p.to - p.from) === direction);
-      x.push(queue.length / 16, queue.reduce((age, p) => Math.max(age, sim.time - p.arrived), 0) / 360);
-    }
-    for (let id = 0; id < 5; id++) x.push(Number(sim.cars[id]?.passengers.some(p => sim.people[p].to === floor) ?? false));
+export const CONTEXT_FEATURES = 24;
+export const STOP_FEATURES = 18;
+export const OBSERVATIONS = CONTEXT_FEATURES + ACTIONS * STOP_FEATURES;
+export function observe(sim: Simulation, selected: Car, legal = sim.candidates(selected)) {
+  const waiting = sim.waiting(), c = sim.config;
+  const active = sim.cars.filter(car => car.enabled);
+  const oldest = waiting.reduce((m, p) => Math.max(m, sim.time - p.arrived), 0);
+  const x = new Float32Array(OBSERVATIONS);
+  x.set([
+    Math.min(sim.time, 360) / 360, c.floors / 40, c.capacity / 16, c.speed / 3, c.doors / 10, c.demand / 30,
+    c.waitWeight / 4, c.tailWeight / 4, c.rideWeight / 4, active.length / 5,
+    waiting.length / 32, oldest / 360, selected.passengers.length / c.capacity, selected.direction,
+    (selected.position + 5) / 45, legal.length / 16,
+    ...['night', 'morning', 'evening', 'mixed'].map(pattern => Number(c.pattern === pattern)),
+    active.reduce((n, car) => n + car.passengers.length, 0) / (active.length * c.capacity),
+    active.filter(car => car.target !== null).length / active.length,
+    waiting.filter(p => p.from <= 0).length / 16,
+    waiting.reduce((n, p) => n + sim.time - p.arrived, 0) / 3600,
+  ]);
+  const look = collectiveStop(selected.position, selected.direction, legal);
+  for (const stop of legal) {
+    const distance = Math.abs(stop.floor - selected.position), heading = Math.sign(stop.floor - selected.position);
+    const queue = waiting.filter(p => p.from === stop.floor && Math.sign(p.to - p.from) === stop.direction);
+    const onboard = selected.passengers.map(id => sim.people[id]);
+    const passing = onboard.filter(p => (p.to - selected.position) * heading >= 0 && (p.to - stop.floor) * heading < 0).length;
+    const otherDistance = Math.min(45, ...active.filter(car => car.id !== selected.id).map(car => Math.abs((car.target ?? car.position) - stop.floor)));
+    x.set([
+      1, distance / 45, (stop.floor - selected.position) / 45, Number(stop.inside), stop.direction,
+      stop.age / 360, (stop.count ?? 1) / 16, (stop.ageSum ?? stop.age) / 3600,
+      Number(heading === selected.direction || heading === 0), Number(stop.direction === selected.direction),
+      passing / c.capacity, Number(stop === look), otherDistance / 45,
+      (Math.ceil(distance / c.speed) + c.doors) / 60,
+      Math.min(queue.length, c.capacity - selected.passengers.length) / c.capacity,
+      (stop.floor + 5) / 45,
+      Number(onboard.some(p => p.to === stop.floor)),
+      queue.reduce((n, p) => n + c.waitWeight / 60 + 2 * c.tailWeight * (sim.time - p.arrived) / 3600, 0),
+    ], CONTEXT_FEATURES + actionId(stop) * STOP_FEATURES);
   }
-  for (let id = 0; id < 5; id++) {
-    const c = sim.cars[id];
-    x.push(c ? 1 : 0, Number(c?.enabled ?? false), c ? (c.position + 5) / 45 : 0, c?.direction ?? 0,
-      c?.passengers.length ? c.passengers.length / sim.config.capacity : 0, c?.target == null ? -1 : (c.target + 5) / 45,
-      c?.pickupDirection ?? 0, (c?.door ?? 0) / 10, Number(id === selected.id));
-  }
-  const c = sim.config;
-  x.push(Math.min(sim.time, 360) / 360, c.floors / 40, c.capacity / 16, c.speed / 3, c.doors / 10, c.demand / 30,
-    c.waitWeight / 4, c.tailWeight / 4, c.rideWeight / 4);
-  for (const pattern of ['night', 'morning', 'evening', 'mixed']) x.push(Number(c.pattern === pattern));
-  return Float32Array.from(x);
+  return x;
 }
-export const OBSERVATIONS = 46 * 10 + 5 * 9 + 13;
 export function qValues(output: Float32Array) {
   const values = new Float32Array(ACTIONS); let mean = 0;
   for (let a = 0; a < ACTIONS; a++) mean += output[a] / ACTIONS;
@@ -40,7 +56,7 @@ export function qValues(output: Float32Array) {
 }
 export function policyStop(sim: Simulation, car: Car, candidates: Stop[], policy: Policy): Stop {
   if (!policy.network) return heuristicStop(sim, car, candidates, greedy(policy.q, sim.stateKey()));
-  const output = forward(policy.network, observe(sim, car)).output;
+  const output = forward(policy.network, observe(sim, car, candidates)).output;
   const values = policy.algorithm === 'ddqn' ? qValues(output) : output;
   const a = argmax(values, candidates.map(actionId));
   return candidates.find(s => actionId(s) === a)!;

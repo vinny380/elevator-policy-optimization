@@ -1,5 +1,6 @@
 import { episode, EPISODE_SECONDS, type Config, type Learning } from './engine';
 import { Trainer, evaluatePolicy, validateSettings, type NeuralSettings } from './learning';
+import { selectionCases } from './evaluation';
 import type { Algorithm, Policy } from './policy';
 
 export interface Point { episode: number; training: number; evaluation: number; baseline: number; wait: number; delivered: number }
@@ -8,16 +9,16 @@ export type TrainingMessage = { type: 'progress'; episodes: number; steps: numbe
 export interface TrainingRequest { type: 'start' | 'pause' | 'resume'; config: Config; learning: Learning; algorithm: Algorithm; neural: NeuralSettings }
 let running = false, generation = 0, start = 0, baseline = 0;
 let trainer: Trainer;
-const evaluationSeeds = [910001, 910002, 910003, 910004];
+let evaluation: ReturnType<typeof selectionCases>;
 let batchScore = 0, batchCount = 0;
 function batch(id: number) {
   if (!running || id !== generation) return;
   try {
     // Yield after each episode, so pause/settings messages are handled promptly.
     const result = trainer.run(); batchScore += result.score; batchCount++;
-    const interval = trainer.algorithm === 'tabular' ? 20 : 5;
+    const interval = 20;
     if (batchCount >= interval) {
-      const results = evaluationSeeds.map(seed => evaluatePolicy(trainer.config, seed, trainer.policy));
+      const results = evaluation.map(({ config, seed }) => evaluatePolicy(config, seed, trainer.policy));
       const mean = (key: 'score' | 'meanWait' | 'delivered') => results.reduce((n, r) => n + r[key], 0) / results.length;
       // The x axis counts all measured episodes, including explicitly labeled imitation.
       const episodes = trainer.episodes + trainer.pretrainingEpisodes;
@@ -38,7 +39,8 @@ self.onmessage = (event: MessageEvent<TrainingRequest>) => {
     if (data.type === 'start') {
       running = false; generation++; trainer = new Trainer(data.config, data.algorithm, data.learning, data.neural);
       start = performance.now(); batchCount = 0; batchScore = 0;
-      baseline = evaluationSeeds.reduce((n, seed) => n + episode(data.config, seed).score, 0) / evaluationSeeds.length;
+      evaluation = selectionCases(data.config, data.neural.variedTraffic);
+      baseline = evaluation.reduce((n, { config, seed }) => n + episode(config, seed).score, 0) / evaluation.length;
     } else {
       if (!trainer) throw new Error('Start training before resuming');
       trainer.configure(data.learning, data.neural);

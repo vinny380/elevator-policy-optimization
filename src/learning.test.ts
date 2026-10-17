@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { defaults, learningDefaults, random, Simulation } from './engine.ts';
-import { Adam, backward, forward, network, probabilities } from './network.ts';
+import { Adam, backward, forward, network, probabilities, sharedNetwork } from './network.ts';
 import { ACTIONS, OBSERVATIONS, observe, actionId, policyStop, type Algorithm } from './policy.ts';
 import { Trainer, neuralDefaults, evaluatePolicy, doubleTarget, advantages, clippedDerivative, ppoGradient, makeTransitions, type Transition } from './learning.ts';
 import { predictiveStop } from './predictive.ts';
@@ -124,11 +124,39 @@ test('weighted PDDL changes its first stop when old-call weight increases and ex
 });
 
 test('changing the discount discards replay rewards computed with the old discount', () => {
-  const trainer = new Trainer(defaults, 'ddqn', learningDefaults, neuralDefaults);
+  const settings = { ...neuralDefaults, variedTraffic: false };
+  const trainer = new Trainer({ ...defaults, demand: 1 }, 'ddqn', learningDefaults, settings);
   for (let i = 0; i < 5; i++) trainer.run();
   const updates = trainer.updates; assert.ok(updates > 0);
-  trainer.configure({ ...learningDefaults, gamma: 0.8 }, neuralDefaults);
+  trainer.configure({ ...learningDefaults, gamma: 0.8 }, settings);
   const result = trainer.run();
   assert.ok(result.decisions < neuralDefaults.batch);
   assert.equal(trainer.updates, updates, 'must refill replay before updating with the new discount');
+});
+
+
+test('shared stop scorer gradients match finite differences and commute with action permutations', () => {
+  const n = sharedNetwork(2, 3, 3, 3, random(8));
+  const x = Float32Array.of(0.1, -0.2, 1, 0.4, 0.8, 1, -0.1, 0.7, 0, 0, 0);
+  const dy = Float32Array.of(0.3, -0.2, 1, 0.4), { hidden, output } = forward(n, x), gradient = new Float32Array(n.weights.length);
+  backward(n, x, hidden, dy, gradient);
+  const loss = () => forward(n, x).output.reduce((sum, y, i) => sum + y * dy[i], 0);
+  for (let i = 0; i < n.weights.length; i++) {
+    const original = n.weights[i]; n.weights[i] = original + 0.001; const plus = loss();
+    n.weights[i] = original - 0.001; const minus = loss(); n.weights[i] = original;
+    close(gradient[i], (plus - minus) / 0.002);
+  }
+  const swapped = x.slice(); swapped.set(x.subarray(5, 8), 2); swapped.set(x.subarray(2, 5), 5);
+  const result = forward(n, swapped).output;
+  close(result[0], output[1]); close(result[1], output[0]); close(result[3], output[3]);
+  assert.equal(output[2], 0, 'masked stops have no scorer contribution');
+});
+
+test('predictive search cannot distinguish hidden destinations or inspect the real future', () => {
+  const a = new Simulation({ ...defaults, pattern: 'mixed' }, 17), b = new Simulation({ ...defaults, pattern: 'mixed' }, 999);
+  a.addPassenger(0, 10); a.addPassenger(20, 0);
+  b.addPassenger(0, 40); b.addPassenger(20, -5);
+  const before = structuredClone({ people: a.people, cars: a.cars, time: a.time, cost: a.cost });
+  assert.deepEqual(predictiveStop(a, a.cars[0], a.candidates(a.cars[0])), predictiveStop(b, b.cars[0], b.candidates(b.cars[0])));
+  assert.deepEqual({ people: a.people, cars: a.cars, time: a.time, cost: a.cost }, before);
 });

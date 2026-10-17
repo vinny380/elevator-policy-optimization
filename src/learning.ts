@@ -1,9 +1,9 @@
 import { Simulation, EPISODE_SECONDS, episode, random, type Config, type Learning } from './engine';
-import { ACTIONS, OBSERVATIONS, actionId, observe, qValues, heuristicStop, policyStop, type Algorithm, type Policy } from './policy';
-import { network, forward, backward, Adam, argmax, probabilities, sample, type Network } from './network';
+import { ACTIONS, OBSERVATIONS, CONTEXT_FEATURES, STOP_FEATURES, actionId, observe, qValues, heuristicStop, policyStop, type Algorithm, type Policy } from './policy';
+import { sharedNetwork, forward, backward, Adam, argmax, probabilities, sample, type Network } from './network';
 
-export interface NeuralSettings { rate: number; clip: number; entropy: number; batch: number; epochs: number; targetEvery: number; pretrain: number; seed: number }
-export const neuralDefaults: NeuralSettings = { rate: 0.0003, clip: 0.2, entropy: 0.01, batch: 32, epochs: 4, targetEvery: 100, pretrain: 0, seed: 7 };
+export interface NeuralSettings { rate: number; clip: number; entropy: number; batch: number; epochs: number; targetEvery: number; pretrain: number; seed: number; variedTraffic: boolean }
+export const neuralDefaults: NeuralSettings = { rate: 0.001, clip: 0.2, entropy: 0.01, batch: 32, epochs: 4, targetEvery: 100, pretrain: 0, seed: 7, variedTraffic: true };
 export interface Transition { x: Float32Array; legal: number[]; action: number; reward: number; elapsed: number; next: Float32Array; nextLegal: number[]; terminal: boolean; logp: number; value: number }
 export interface Decision { x: Float32Array; legal: number[]; action: number; time: number; logp: number; value: number }
 export function makeTransitions(events: Decision[], rewards: number[], gamma: number): Transition[] {
@@ -47,7 +47,7 @@ export function validateSettings(l: Learning, n: NeuralSettings) {
     !Number.isFinite(n.rate) || n.rate < 0.00001 || n.rate > 0.01 || !Number.isFinite(n.clip) || n.clip < 0.05 || n.clip > 0.4 ||
     !Number.isFinite(n.entropy) || n.entropy < 0 || n.entropy > 0.1 || ![16, 32, 64].includes(n.batch) ||
     !Number.isInteger(n.epochs) || n.epochs < 1 || n.epochs > 8 || !Number.isInteger(n.targetEvery) || n.targetEvery < 10 || n.targetEvery > 1000 ||
-    !Number.isInteger(n.pretrain) || n.pretrain < 0 || n.pretrain > 100 || !Number.isInteger(n.seed)) throw new Error('Invalid learning settings');
+    !Number.isInteger(n.pretrain) || n.pretrain < 0 || n.pretrain > 100 || !Number.isInteger(n.seed) || typeof n.variedTraffic !== 'boolean') throw new Error('Invalid learning settings');
 }
 export class Trainer {
   policy: Policy; target?: Network; optimizer?: Adam;
@@ -59,7 +59,7 @@ export class Trainer {
     this.rng = random(settings.seed);
     this.policy = { algorithm, q: {} };
     if (algorithm !== 'tabular') {
-      this.policy.network = network(OBSERVATIONS, 32, ACTIONS + 1, this.rng);
+      this.policy.network = sharedNetwork(CONTEXT_FEATURES, STOP_FEATURES, ACTIONS, 16, this.rng);
       this.target = structuredClone(this.policy.network); this.optimizer = new Adam(this.policy.network);
     }
   }
@@ -72,16 +72,21 @@ export class Trainer {
   get size() { return this.policy.network?.weights.length ?? Object.keys(this.policy.q).length; }
   get phase() { return this.algorithm === 'ppo' && this.pretrainingEpisodes < this.settings.pretrain ? 'Imitating LOOK' : 'Learning'; }
   run() {
-    const seed = this.config.seed + this.episodes + this.pretrainingEpisodes + 1;
+    const index = this.episodes + this.pretrainingEpisodes;
+    const seed = this.config.seed + index + 1;
+    const config = this.settings.variedTraffic ? { ...this.config,
+      pattern: (['night', 'morning', 'evening', 'mixed'] as const)[index % 4],
+      enabled: index % 5 === 0 ? this.config.enabled.map((_, i) => i < this.config.cars) : this.config.enabled,
+    } : this.config;
     if (this.algorithm === 'tabular') {
-      const result = episode(this.config, seed, this.policy.q, this.learning, this.rng);
+      const result = episode(config, seed, this.policy.q, this.learning, this.rng);
       this.episodes++; this.decisions += result.decisions; return result;
     }
-    const sim = new Simulation(this.config, seed), events: Decision[] = [], rewards: number[] = [];
+    const sim = new Simulation(config, seed), events: Decision[] = [], rewards: number[] = [];
     const imitate = this.phase === 'Imitating LOOK';
     while (sim.time < EPISODE_SECONDS) {
       const reward = sim.step((s, car, candidates) => {
-        const x = observe(s, car), legal = candidates.map(actionId), output = forward(this.policy.network!, x).output;
+        const x = observe(s, car, candidates), legal = candidates.map(actionId), output = forward(this.policy.network!, x).output;
         const p = this.algorithm === 'ppo' ? probabilities(output, legal) : null;
         const action = imitate ? actionId(heuristicStop(s, car, candidates)) : p ? sample(p, legal, this.rng) : this.rng() < this.learning.epsilon ? legal[Math.floor(this.rng() * legal.length)] : argmax(qValues(output), legal);
         events.push({ x, legal, action, time: s.time, logp: p ? Math.log(Math.max(1e-30, p[action])) : 0, value: output[ACTIONS] });

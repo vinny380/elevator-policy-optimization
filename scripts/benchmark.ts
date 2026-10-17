@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { selectionCases } from '../src/evaluation.ts';
 import { defaults, learningDefaults } from '../src/engine.ts';
 import { Trainer, evaluatePolicy, neuralDefaults } from '../src/learning.ts';
 import { compare, policyName, type SavedPolicy } from '../src/comparison.ts';
@@ -15,12 +16,13 @@ const policies: SavedPolicy[] = [], training: object[] = [];
 for (const variant of variants) for (let run = 0; run < runs; run++) {
   const seed = 7 + run * 101, settings = { ...neuralDefaults, ...variant, seed };
   const trainer = new Trainer(config, variant.algorithm, learningDefaults, settings), started = performance.now();
+  const cases = selectionCases(config, settings.variedTraffic);
   let best: SavedPolicy | undefined;
   while (trainer.episodes < episodes) {
     trainer.run();
     const count = trainer.episodes + trainer.pretrainingEpisodes;
-    if (count % (variant.algorithm === 'tabular' ? 20 : 5) === 0 || trainer.episodes === episodes) {
-      const score = [910001, 910002, 910003, 910004].reduce((sum, evalSeed) => sum + evaluatePolicy(config, evalSeed, trainer.policy).score, 0) / 4;
+    if (count % 20 === 0 || trainer.episodes === episodes) {
+      const score = cases.reduce((sum, c) => sum + evaluatePolicy(c.config, c.seed, trainer.policy).score, 0) / cases.length;
       if (!best || score > best.score) best = { id: `${variant.algorithm}-${variant.pretrain}-${seed}`, name: policyName(trainer.policy, seed, variant.pretrain), policy: structuredClone(trainer.policy), episode: count, score, seed, learning: learningDefaults, neural: settings };
     }
   }

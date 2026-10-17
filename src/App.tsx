@@ -7,6 +7,7 @@ import { controllerAction, policyName, type SavedPolicy, type Controller } from 
 import { defaults, floorLabel, learningDefaults, Simulation, type Config, type Learning, type Pattern } from './engine';
 import { neuralDefaults, type NeuralSettings } from './learning';
 import { ALGORITHM_NAMES, type Algorithm, type Policy } from './policy';
+import { referencePolicies } from './reference';
 import type { Checkpoint, Point, TrainingMessage } from './training.worker';
 
 const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 0 });
@@ -36,11 +37,11 @@ export function App() {
   const [, setTick] = useState(0);
   const [paused, setPaused] = useState(false);
   const [speed, setSpeed] = useState(4);
-  const [controller, setController] = useState<Controller>('collective');
+  const [controller, setController] = useState<Controller>('predictive');
   const [learning, setLearning] = useState<Learning>(learningDefaults);
   const [algorithm, setAlgorithm] = useState<Algorithm>('ddqn');
   const [neural, setNeural] = useState<NeuralSettings>(neuralDefaults);
-  const [policies, setPolicies] = useState<SavedPolicy[]>([]);
+  const [policies, setPolicies] = useState<SavedPolicy[]>(() => referencePolicies(defaults));
   const [phase, setPhase] = useState('Learning');
   const [trainingDetails, setTrainingDetails] = useState({ updates: 0, pretraining: 0 });
   const [running, setRunning] = useState(false);
@@ -69,7 +70,7 @@ export function App() {
       // Keep a bounded set of real snapshots; every plotted point remains replayable.
       setPoints(prev => [...prev, data.point].slice(-100));
       setCheckpoints(prev => [...prev, data.checkpoint].slice(-100));
-      const id = `${algorithm}-${algorithm === 'ppo' ? neural.pretrain : 0}-${neural.seed}`;
+      const id = `${algorithm}-${algorithm === 'ppo' ? neural.pretrain : 0}-${neural.seed}-${neural.variedTraffic}`;
       setPolicies(prev => {
         const previous = prev.find(p => p.id === id);
         if (previous && previous.score >= data.checkpoint.score) return prev;
@@ -80,11 +81,11 @@ export function App() {
     };
     worker.onerror = () => { setNotice('Training worker failed. Restart training to retry.'); setRunning(false); };
     setSim(new Simulation(config)); setPoints([]); setCheckpoints([]); setBest(null); setStats({ episodes: 0, decisions: 0, states: 0 });
-    setRunning(false); setSelectedCheckpoint(null); qRef.current = { algorithm: 'tabular', q: {} }; setQVersion(null); setController('collective'); setSelectedPerson(null);
-    if (previousConfig.current !== config) { setPolicies([]); setNotice('New experiment; training and replay reset. Previous scores cleared.'); }
+    setRunning(false); setSelectedCheckpoint(null); qRef.current = { algorithm: 'tabular', q: {} }; setQVersion(null); setController('predictive'); setSelectedPerson(null);
+    if (previousConfig.current !== config) { setPolicies(referencePolicies(config)); setNotice('New experiment; training and replay reset. Previous scores cleared.'); }
     previousConfig.current = config;
     return () => { worker.terminate(); workerRef.current = null; };
-  }, [config, algorithm, neural.seed, neural.pretrain]);
+  }, [config, algorithm, neural.seed, neural.pretrain, neural.variedTraffic]);
   useEffect(() => {
     let frame = 0, last = performance.now(), accumulated = 0, rendered = 0;
     const animate = (now: number) => {
@@ -140,7 +141,7 @@ export function App() {
   }
   function changeNeural(partial: Partial<NeuralSettings>) {
     if (running) { workerRef.current?.postMessage({ type: 'pause' }); setRunning(false); }
-    setNeural(prev => ({ ...prev, ...partial })); setNotice('Training paused. Resume to apply settings. Seed or warm-start changes begin a new run.');
+    setNeural(prev => ({ ...prev, ...partial })); setNotice('Training paused. Resume to apply settings. Seed, traffic or warm-start changes begin a new run.');
   }
   function watchSaved(which: Controller, id: string) {
     if (which === 'learned') {
@@ -216,6 +217,7 @@ export function App() {
         {panel === 'learning' && <>
           <Section title="Algorithm"><label className="select-label">Learner<select value={algorithm} onChange={e => setAlgorithm(e.target.value as Algorithm)}>{Object.entries(ALGORITHM_NAMES).map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>
           {algorithm === 'ppo' && <label className="select-label">Warm start<select value={neural.pretrain} onChange={e => changeNeural({ pretrain: Number(e.target.value) })}><option value={0}>Learn from scratch</option><option value={20}>Imitate LOOK · 20 episodes</option><option value={100}>Imitate LOOK · 100 episodes</option></select></label>}
+          <label className="select-label">Training traffic<select value={neural.variedTraffic ? 'varied' : 'current'} onChange={e => changeNeural({ variedTraffic: e.target.value === 'varied' })}><option value="varied">Varied traffic + service levels</option><option value="current">Current scenario only</option></select></label>
           <label className="select-label">Training seed<input type="number" min={1} max={999999} value={neural.seed} onChange={e => { const seed = Number(e.target.value); if (Number.isInteger(seed) && seed >= 1 && seed <= 999999) changeNeural({ seed }); }} /></label>
           <p className="field-note">Changing learner or seed starts a new run. Best policies from the last 12 runs stay in Compare until the building or reward changes.</p></Section>
           <Chart points={points} selected={selectedCheckpoint} onSelect={chooseCheckpoint} /><div className="learning-totals"><div><strong>{fmt(stats.episodes)}</strong><span>Episodes</span></div><div><strong>{fmt(stats.decisions)}</strong><span>Choices</span></div><div><strong>{fmt(stats.states)}</strong><span>{algorithm === 'tabular' ? 'States' : 'Parameters'}</span></div></div>
@@ -231,8 +233,8 @@ export function App() {
             </>}
             <Range label="Discount γ" value={learning.gamma} min={0} max={1} step={0.01} onChange={gamma => changeLearning({ gamma })} hint="Per second. 1 values the entire episode equally." />
           </details>
-          <details><summary>What the learner sees</summary><p>Up/down queue counts and oldest waits on every floor; each car’s position, direction, load, destinations, target, doors and service status. Waiting destinations and future arrivals are hidden. Queue counts and ages assume simulated sensors, not just physical hall buttons.</p><p>Neural policies choose a legal next stop for one ready car at a time, sharing one central network. Double DQN uses replay, a target network, and separate value/advantage outputs. PPO uses clipped policy updates, a value estimate, entropy, and duration-aware advantages. Its optional warm start imitates LOOK choices; it does not reproduce the literature’s pickup-time pretraining.</p></details>
-          <details><summary>How scores work</summary><p>Higher is better: negative waiting, long-wait, and ride cost per passenger. Six-minute episodes; four fixed evaluation seeds with exploration off. Best can overfit those seeds—use Compare to test separate traffic.</p><p>The graph retains 100 checkpoints plus the best-ever policy. Imitation episodes are included in the episode count; the cyan curve always measures the learned policy with exploration off. Replay uses the building seed. Training stays in this tab; reload clears it.</p></details>
+          <details><summary>What the learner sees</summary><p>Each legal stop’s distance, direction, queue count and age, available capacity, passed destinations, and nearby cars; fleet load and traffic context. One scorer shares what it learns across floors. LOOK’s recommendation is an explicit input, not a hidden fallback. Waiting destinations and future arrivals are hidden. Queue counts and ages assume simulated sensors, not just physical hall buttons.</p><p>Neural policies choose a legal next stop for one ready car at a time, sharing one stop-scoring network and a separate value network. Double DQN uses replay, a target network, and separate value/advantage outputs. PPO uses clipped policy updates, a value estimate, entropy, and duration-aware advantages. Its optional warm start imitates LOOK choices; it does not reproduce the literature’s pickup-time pretraining.</p></details>
+          <details><summary>How scores work</summary><p>Higher is better: negative waiting, long-wait, and ride cost per passenger. Six-minute episodes; {neural.variedTraffic ? 'up to 32 fixed evaluation trials across traffic and service levels' : 'four fixed evaluation seeds'}, with exploration off. Best can overfit those seeds—use Compare to test separate traffic.</p><p>The graph retains 100 checkpoints plus the best-ever policy. Imitation episodes are included in the episode count; the cyan curve always measures the learned policy with exploration off. Replay uses the building seed. Training stays in this tab; reload clears it.</p></details>
           <button className="secondary-button" disabled={!stats.episodes} onClick={() => setConfig(prev => ({ ...prev }))}>Restart from scratch</button><p className="field-note">Clears checkpoints. Keeps your settings.</p>
         </>}
         {panel === 'comparison' && <ComparisonPanel config={config} policies={policies} checkpoint={qVersion} onWatch={watchSaved} />}
