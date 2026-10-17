@@ -19,6 +19,7 @@ export interface Car {
   id: number; position: number; target: number | null; direction: number;
   pickupDirection: number | null; door: number; enabled: boolean; passengers: number[]; reason: string;
 }
+export type StopSelector = (sim: Simulation, car: Car, candidates: Stop[]) => Stop;
 export interface Metrics {
   waiting: number; riding: number; delivered: number; meanWait: number;
   p95: number; longest: number; cost: number; distance: number; score: number;
@@ -93,17 +94,33 @@ export class Simulation {
       ready?.direction ?? 0, ready ? Math.floor((ready.position + 5) / 10) : -1,
       Math.min(2, Math.floor(this.time / 120))].join(':');
   }
-  private chooseStop(car: Car, action: number, claimed: Set<string>) {
+  candidates(car: Car, claimed = new Set(this.cars.filter(c => c.enabled && c.target !== null && c.pickupDirection !== null && c.passengers.length < this.config.capacity).map(c => `${c.target}:${c.pickupDirection}`))): Stop[] {
     const onboard = car.passengers.map(id => this.people[id]);
     const hall = this.waiting().filter(p => car.passengers.length < this.config.capacity &&
       (!onboard.length || Math.sign(p.to - p.from) === Math.sign(onboard[0].to - p.from)) &&
       !claimed.has(`${p.from}:${Math.sign(p.to - p.from)}`));
     const candidates = [...onboard.map(p => ({ floor: p.to, direction: Math.sign(p.to - car.position), age: this.time - p.arrived, inside: true })), ...hall.map(p => ({ floor: p.from, direction: Math.sign(p.to - p.from), age: this.time - p.arrived, inside: false }))];
+    const unique = new Map<string, Stop>();
+    for (const stop of candidates) {
+      const key = `${stop.floor}:${stop.inside ? 0 : stop.direction}`;
+      const previous = unique.get(key);
+      if (previous) { previous.count = (previous.count ?? 1) + 1; previous.ageSum = (previous.ageSum ?? previous.age) + stop.age; previous.age = Math.max(previous.age, stop.age); }
+      else unique.set(key, { ...stop, count: 1, ageSum: stop.age });
+    }
+    return [...unique.values()];
+  }
+  private chooseStop(car: Car, action: number | StopSelector, claimed: Set<string>) {
+    const candidates = this.candidates(car, claimed);
     if (!candidates.length) { car.target = null; car.reason = 'No outstanding calls'; return; }
     let stop: Stop | undefined;
+    if (typeof action === 'function') {
+      const selected = action(this, car, candidates);
+      stop = candidates.find(s => s.floor === selected.floor && s.inside === selected.inside && s.direction === selected.direction);
+      if (!stop) throw new Error('Policy selected an illegal stop');
+    }
     let fallback = false;
     if (action === PDDL_ACTION) {
-      this.lastPlan = planStops(car.position, candidates, this.config.speed, this.config.doors, car.id, this.time);
+      this.lastPlan = planStops(car.position, candidates, this.config.speed, this.config.doors, car.id, this.time, this.config);
       stop = this.lastPlan.firstStop ?? undefined;
       if (!stop) { this.plannerFallbacks++; fallback = true; }
     }
@@ -118,7 +135,7 @@ export class Simulation {
     car.target = stop.floor; car.pickupDirection = stop.inside ? null : stop.direction;
     if (Math.abs(stop.floor - car.position) > 0.01) car.direction = Math.sign(stop.floor - car.position);
     else if (!stop.inside) car.direction = stop.direction;
-    car.reason = `${action === PDDL_ACTION ? (fallback ? 'PDDL limit → LOOK fallback' : 'PDDL plan') : STRATEGIES[action]} → ${floorLabel(stop.floor)} · ${stop.inside ? 'onboard destination' : 'hall call'}`;
+    car.reason = `${action === PDDL_ACTION ? (fallback ? 'PDDL limit → LOOK fallback' : 'PDDL plan') : typeof action === 'function' ? 'Policy' : STRATEGIES[action]} → ${floorLabel(stop.floor)} · ${stop.inside ? 'onboard destination' : 'hall call'}`;
     if (!stop.inside) claimed.add(`${stop.floor}:${stop.direction}`);
   }
   private arrive(car: Car) {
@@ -142,8 +159,8 @@ export class Simulation {
     car.target = null; car.pickupDirection = null; car.door = this.config.doors;
   }
   // A fixed one-second step makes reward and arrivals independent of rendering speed.
-  step(action = 0, arrivals = true) {
-    if (!Number.isInteger(action) || action < 0 || action > PDDL_ACTION) throw new Error('Unknown routing strategy');
+  step(action: number | StopSelector = 0, arrivals = true) {
+    if (typeof action !== 'function' && (!Number.isInteger(action) || action < 0 || action > PDDL_ACTION)) throw new Error('Unknown routing strategy');
     const before = this.cost;
     if (arrivals) while (this.nextArrival <= this.time + 1) { this.spawn(this.nextArrival); this.nextArrival += this.arrivalInterval(); }
     for (const p of this.people) {
@@ -168,6 +185,24 @@ export class Simulation {
       if (Math.abs(car.position - car.target) < 0.0001) { car.position = car.target; this.arrive(car); }
     }
     return -(this.cost - before);
+  }
+  forecast(seed: number) {
+    const copy = new Simulation(this.config, seed);
+    copy.time = this.time; copy.cost = this.cost; copy.distance = this.distance;
+    copy.cars = structuredClone(this.cars);
+    copy.people = this.people.map(p => {
+      if (p.boarded !== null) return { ...p };
+      const direction = Math.sign(p.to - p.from);
+      const destinations = Array.from({ length: this.config.floors + 6 }, (_, i) => i - 5).filter(f => Math.sign(f - p.from) === direction);
+      // Condition the configured traffic prior on the observed hall-call direction.
+      const weights = destinations.map(f => this.config.pattern === 'evening' ? (f === 0 ? 4 : f < 0 ? 0.2 : 0) : this.config.pattern === 'night' && p.from > 0 ? (f === -5 ? 3 : f === 0 ? 2 : 0) : this.config.pattern === 'morning' || (this.config.pattern === 'night' && p.from === 0) ? Number(f > 0) : 1);
+      const total = weights.reduce((a, b) => a + b, 0);
+      let draw = copy.rng() * (total || destinations.length), to = destinations.at(-1)!;
+      for (let i = 0; i < destinations.length; i++) { draw -= total ? weights[i] : 1; if (draw < 0) { to = destinations[i]; break; } }
+      return { ...p, to };
+    });
+    copy.nextArrival = copy.time + copy.arrivalInterval();
+    return copy;
   }
   metrics(): Metrics {
     const waits = this.people.map(p => (p.boarded ?? this.time) - p.arrived).sort((a, b) => a - b);

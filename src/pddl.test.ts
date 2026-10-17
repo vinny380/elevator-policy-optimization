@@ -63,11 +63,11 @@ test('PDDL does not use destinations of passengers who have not boarded', () => 
   assert.equal(a.lastPlan?.domain, b.lastPlan?.domain); assert.equal(a.lastPlan?.problem, b.lastPlan?.problem);
 });
 
-test('three-way comparison uses matching streams and signed deltas without mutating the checkpoint', () => {
+test('four-way comparison uses matching streams and signed deltas without mutating the checkpoint', () => {
   const q = { '0:0:0:0:0:1': [-1, -2, -3, -4] }; const before = structuredClone(q);
   const result = compare(defaults, q, 20);
   assert.deepEqual(q, before); assert.deepEqual(result.seeds, COMPARISON_SEEDS);
-  assert.equal(result.rows.length, 3); assert.equal(result.checkpoint, 20);
+  assert.equal(result.rows.length, 4); assert.equal(result.checkpoint, 20);
   for (const row of result.rows) {
     assert.equal(row.people, result.rows[0].people);
     assert.ok(Math.abs(row.metrics.waiting + row.metrics.riding + row.metrics.delivered - row.people) < 1e-8);

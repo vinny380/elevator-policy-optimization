@@ -125,10 +125,10 @@ export function solvePddl(domain: string, problem: string, expansionLimit = 1500
   return { status: 'unsolvable', actions: [], cost: 0, expanded };
 }
 
-export interface Stop { floor: number; direction: number; age: number; inside: boolean }
-export interface PlanningSnapshot extends Plan { domain: string; problem: string; stops: Stop[]; firstStop: Stop | null; car: number; time: number; candidateCount: number }
+export interface Stop { floor: number; direction: number; age: number; inside: boolean; count?: number; ageSum?: number }
+export interface PlanningSnapshot extends Plan { domain: string; problem: string; stops: Stop[]; firstStop: Stop | null; car: number; time: number; candidateCount: number; objective: string }
 const token = (floor: number) => floor < 0 ? `p${-floor}` : floor === 0 ? 'g' : `f${floor}`;
-export function planStops(position: number, candidates: Stop[], speed: number, doors: number, car: number, time: number): PlanningSnapshot {
+export function planStops(position: number, candidates: Stop[], speed: number, doors: number, car: number, time: number, weights?: { waitWeight: number; tailWeight: number; rideWeight: number }): PlanningSnapshot {
   // Receding horizon: prioritize onboard destinations, then old hall calls; apply only the first stop.
   // Capacity and newly revealed destinations are checked again by the simulator before replanning.
   const unique = new Map<number, Stop>();
@@ -137,14 +137,25 @@ export function planStops(position: number, candidates: Stop[], speed: number, d
   const floors = [...new Set([position, ...stops.map(s => s.floor)])];
   const predicates = [...floors.map(f => `at-${token(f)}`), ...stops.flatMap(s => [`pending-${token(s.floor)}`, `served-${token(s.floor)}`])];
   const stopForAction = new Map<string, Stop>();
-  const actions = floors.flatMap(from => stops.map(stop => {
-    const a = token(from), b = token(stop.floor), name = `serve-${b}-from-${a}`;
-    stopForAction.set(name, stop);
+  const actions: string[] = [];
+  const rates = stops.map(stop => candidates.filter(c => c.floor === stop.floor).reduce((sum, c) => sum + (c.inside ? (weights?.rideWeight ?? 0) * (c.count ?? 1) / 60 : (weights?.waitWeight ?? 0) * (c.count ?? 1) / 60 + 2 * (weights?.tailWeight ?? 0) * (c.ageSum ?? c.age) / 3600), 0));
+  for (const from of floors) for (let index = 0; index < stops.length; index++) {
+    const stop = stops[index], a = token(from), b = token(stop.floor);
     const duration = Math.max(1, Math.ceil(Math.abs(stop.floor - from) / speed)) + doors;
-    return `  (:action ${name}\n    :parameters ()\n    :precondition (and (at-${a}) (pending-${b}))\n    :effect (and ${from === stop.floor ? '' : `(not (at-${a})) `}(at-${b}) (not (pending-${b})) (served-${b}) (increase (total-cost) ${duration})))`;
-  }));
-  const domain = `; Grounded stop-order model, car ${car + 1}, simulation second ${time}.\n; Constant costs are travel ticks plus door dwell. Only the first stop is executed.\n; This is classical action-cost PDDL, not a temporal passenger/capacity model.\n(define (domain elevator-stops)\n  (:requirements :strips :action-costs)\n  (:predicates ${predicates.map(p => `(${p})`).join(' ')})\n  (:functions (total-cost))\n${actions.join('\n')}\n)`;
+    // Ground the remaining-stop set to express weighted latency with constant costs.
+    // shortcut: marginal wait rates are frozen at snapshot time; full quadratic
+    // elapsed-time costs need a temporal/numeric planner rather than this STRIPS solver.
+    const masks = weights ? Array.from({ length: 1 << stops.length }, (_, i) => i).filter(mask => mask & (1 << index)) : [0];
+    for (const mask of masks) {
+      const name = `serve-${b}-from-${a}${weights ? `-remaining-${mask}` : ''}`;
+      stopForAction.set(name, stop);
+      const condition = weights ? stops.map((s, i) => `(${mask & (1 << i) ? 'pending' : 'served'}-${token(s.floor)})`).join(' ') : `(pending-${b})`;
+      const cost = weights ? duration * rates.reduce((sum, rate, i) => sum + (mask & (1 << i) ? rate : 0), 0) : duration;
+      actions.push(`  (:action ${name}\n    :parameters ()\n    :precondition (and (at-${a}) ${condition})\n    :effect (and ${from === stop.floor ? '' : `(not (at-${a})) `}(at-${b}) (not (pending-${b})) (served-${b}) (increase (total-cost) ${weights ? cost.toFixed(8) : cost})))`);
+    }
+  }
+  const domain = `; Grounded stop-order model, car ${car + 1}, simulation second ${time}.\n; Costs: ${weights ? 'marginal passenger wait/ride cost, frozen at snapshot time' : 'travel ticks plus door dwell'}. Only the first stop is executed.\n; This is classical action-cost PDDL, not a temporal passenger/capacity model.\n(define (domain elevator-stops)\n  (:requirements :strips :action-costs)\n  (:predicates ${predicates.map(p => `(${p})`).join(' ')})\n  (:functions (total-cost))\n${actions.join('\n')}\n)`;
   const problem = `(define (problem elevator-snapshot)\n  (:domain elevator-stops)\n  (:init (at-${token(position)}) ${stops.map(s => `(pending-${token(s.floor)})`).join(' ')} (= (total-cost) 0))\n  (:goal (and ${stops.map(s => `(served-${token(s.floor)})`).join(' ')}))\n  (:metric minimize (total-cost))\n)`;
   const plan = solvePddl(domain, problem);
-  return { ...plan, domain, problem, stops, firstStop: plan.actions.length ? stopForAction.get(plan.actions[0])! : null, car, time, candidateCount: unique.size };
+  return { ...plan, domain, problem, stops, firstStop: plan.actions.length ? stopForAction.get(plan.actions[0])! : null, car, time, candidateCount: unique.size, objective: weights ? 'Estimated passenger cost' : 'Travel + dwell seconds' };
 }

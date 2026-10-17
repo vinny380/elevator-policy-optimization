@@ -3,8 +3,10 @@ import { Building } from './Building';
 import { Chart } from './Chart';
 import { ComparisonPanel } from './ComparisonPanel';
 import { PddlInspector } from './PddlInspector';
-import { controllerAction, type Controller } from './comparison';
-import { defaults, floorLabel, learningDefaults, Simulation, type Config, type Learning, type QTable, type Pattern } from './engine';
+import { controllerAction, policyName, type SavedPolicy, type Controller } from './comparison';
+import { defaults, floorLabel, learningDefaults, Simulation, type Config, type Learning, type Pattern } from './engine';
+import { neuralDefaults, type NeuralSettings } from './learning';
+import { ALGORITHM_NAMES, type Algorithm, type Policy } from './policy';
 import type { Checkpoint, Point, TrainingMessage } from './training.worker';
 
 const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 0 });
@@ -36,6 +38,11 @@ export function App() {
   const [speed, setSpeed] = useState(4);
   const [controller, setController] = useState<Controller>('collective');
   const [learning, setLearning] = useState<Learning>(learningDefaults);
+  const [algorithm, setAlgorithm] = useState<Algorithm>('ddqn');
+  const [neural, setNeural] = useState<NeuralSettings>(neuralDefaults);
+  const [policies, setPolicies] = useState<SavedPolicy[]>([]);
+  const [phase, setPhase] = useState('Learning');
+  const [trainingDetails, setTrainingDetails] = useState({ updates: 0, pretraining: 0 });
   const [running, setRunning] = useState(false);
   const [points, setPoints] = useState<Point[]>([]);
   const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([]);
@@ -47,28 +54,37 @@ export function App() {
   const [panel, setPanel] = useState<Panel | null>(null);
   const [cameraReset, setCameraReset] = useState(0);
   const workerRef = useRef<Worker | null>(null);
-  const qRef = useRef<QTable>({});
+  const trainingStarted = useRef(false);
+  const qRef = useRef<Policy>({ algorithm: 'tabular', q: {} });
   const previousConfig = useRef(config);
   const dialog = useRef<HTMLDialogElement>(null);
   const [qVersion, setQVersion] = useState<number | null>(null);
   useEffect(() => {
     const worker = new Worker(new URL('./training.worker.ts', import.meta.url), { type: 'module' });
-    workerRef.current = worker;
+    workerRef.current = worker; trainingStarted.current = false; setPhase('Learning'); setTrainingDetails({ updates: 0, pretraining: 0 });
     worker.onmessage = ({ data }: MessageEvent<TrainingMessage>) => {
       if (data.type === 'error') { setNotice(data.message); setRunning(false); return; }
+      setPhase(data.phase); setTrainingDetails({ updates: data.updates, pretraining: data.pretraining });
       setStats({ episodes: data.episodes, decisions: data.decisions, states: data.states });
       // Keep a bounded set of real snapshots; every plotted point remains replayable.
       setPoints(prev => [...prev, data.point].slice(-100));
       setCheckpoints(prev => [...prev, data.checkpoint].slice(-100));
+      const id = `${algorithm}-${algorithm === 'ppo' ? neural.pretrain : 0}-${neural.seed}`;
+      setPolicies(prev => {
+        const previous = prev.find(p => p.id === id);
+        if (previous && previous.score >= data.checkpoint.score) return prev;
+        const saved: SavedPolicy = { id, name: policyName(data.checkpoint.policy, neural.seed, neural.pretrain), policy: data.checkpoint.policy, episode: data.episodes, score: data.checkpoint.score, seed: neural.seed, learning: data.checkpoint.learning, neural: data.checkpoint.neural };
+        return [...prev.filter(p => p.id !== id), saved].slice(-12);
+      });
       setBest(prev => !prev || data.checkpoint.score > prev.score ? data.checkpoint : prev);
     };
     worker.onerror = () => { setNotice('Training worker failed. Restart training to retry.'); setRunning(false); };
     setSim(new Simulation(config)); setPoints([]); setCheckpoints([]); setBest(null); setStats({ episodes: 0, decisions: 0, states: 0 });
-    setRunning(false); setSelectedCheckpoint(null); qRef.current = {}; setQVersion(null); setController('collective'); setSelectedPerson(null);
-    if (previousConfig.current !== config) { setNotice('New experiment; training and replay reset. Previous scores cleared.'); }
+    setRunning(false); setSelectedCheckpoint(null); qRef.current = { algorithm: 'tabular', q: {} }; setQVersion(null); setController('collective'); setSelectedPerson(null);
+    if (previousConfig.current !== config) { setPolicies([]); setNotice('New experiment; training and replay reset. Previous scores cleared.'); }
     previousConfig.current = config;
     return () => { worker.terminate(); workerRef.current = null; };
-  }, [config]);
+  }, [config, algorithm, neural.seed, neural.pretrain]);
   useEffect(() => {
     let frame = 0, last = performance.now(), accumulated = 0, rendered = 0;
     const animate = (now: number) => {
@@ -107,20 +123,33 @@ export function App() {
     if (!enabled.slice(0, config.cars).some(Boolean)) { setNotice('Keep one car in service so passengers can reach their destinations.'); return; }
     change({ enabled });
   }
-  function replay(which: Controller = controller) { setSim(new Simulation(config)); setController(which); setPaused(false); setNotice(`Replaying seed ${config.seed} with ${which === 'learned' ? `checkpoint ${qVersion}` : which === 'pddl' ? 'PDDL stop planning' : 'selective collective (LOOK)'}.`); }
+  function replay(which: Controller = controller) { setSim(new Simulation(config)); setController(which); setPaused(false); setNotice(`Replaying seed ${config.seed} with ${which === 'learned' ? `checkpoint ${qVersion}` : which === 'pddl' ? 'PDDL stop planning' : which === 'predictive' ? 'predictive rollouts' : 'selective collective (LOOK)'}.`); }
   function chooseCheckpoint(episode: number) {
     const checkpoint = best?.episode === episode ? best : checkpoints.find(c => c.episode === episode); if (!checkpoint) return;
-    qRef.current = checkpoint.q; setSelectedCheckpoint(episode); setQVersion(episode);
+    qRef.current = checkpoint.policy; setSelectedCheckpoint(episode); setQVersion(episode);
     setSim(new Simulation(config)); setController('learned'); setPaused(false); setNotice(`Checkpoint ${fmt(episode)} loaded. Replaying the same passenger arrivals.`);
   }
   function train() {
     if (running) { workerRef.current?.postMessage({ type: 'pause' }); setRunning(false); return; }
-    workerRef.current?.postMessage({ type: stats.episodes ? 'resume' : 'start', config, learning }); setRunning(true);
+    workerRef.current?.postMessage({ type: trainingStarted.current ? 'resume' : 'start', config, learning, algorithm, neural }); trainingStarted.current = true; setRunning(true);
     setNotice('Training runs in the background. Select a checkpoint to watch the policy.');
   }
   function changeLearning(partial: Partial<Learning>) {
     if (running) { workerRef.current?.postMessage({ type: 'pause' }); setRunning(false); }
     setLearning(prev => ({ ...prev, ...partial })); setNotice('Training paused. Resume to apply the new learning settings.');
+  }
+  function changeNeural(partial: Partial<NeuralSettings>) {
+    if (running) { workerRef.current?.postMessage({ type: 'pause' }); setRunning(false); }
+    setNeural(prev => ({ ...prev, ...partial })); setNotice('Training paused. Resume to apply settings. Seed or warm-start changes begin a new run.');
+  }
+  function watchSaved(which: Controller, id: string) {
+    if (which === 'learned') {
+      const saved = policies.find(p => p.id === id); if (!saved) return;
+      qRef.current = saved.policy; setQVersion(saved.episode); setSelectedCheckpoint(null);
+      setSim(new Simulation(config)); setController('learned'); setPaused(false);
+      setNotice(`Replaying ${saved.name}, episode ${saved.episode}.`);
+    } else replay(which);
+    setPanel(null);
   }
   const metrics = sim.metrics();
   const active = config.enabled.slice(0, config.cars).filter(Boolean).length;
@@ -135,10 +164,11 @@ export function App() {
       <div className="identity"><span className="identity-mark" aria-hidden="true">↑↓</span><div><h1>Elevator</h1><p>Policy optimization</p></div></div>
       <nav className="policy-switch glass" aria-label="Elevator controller">
         <button aria-pressed={controller === 'collective'} onClick={() => replay('collective')}>LOOK</button>
-        <button aria-pressed={controller === 'learned'} onClick={() => { if (best) chooseCheckpoint(best.episode); else { setPanel('learning'); setNotice('Train a policy to unlock RL playback.'); } }}>RL{!best && <span className="untrained-dot" aria-label="Not trained" />}</button>
+        <button aria-pressed={controller === 'learned'} onClick={() => { if (best) chooseCheckpoint(best.episode); else if (qVersion !== null) replay('learned'); else if (policies.length) watchSaved('learned', policies.at(-1)!.id); else { setPanel('learning'); setNotice('Train a policy to unlock RL playback.'); } }}>RL{!best && qVersion === null && !policies.length && <span className="untrained-dot" aria-label="Not trained" />}</button>
+        <button aria-pressed={controller === 'predictive'} onClick={() => replay('predictive')}>Plan</button>
         <button aria-pressed={controller === 'pddl'} onClick={() => replay('pddl')}>PDDL</button>
       </nav>
-      <div className="hud-tools"><button className="icon-button glass" title="Compare algorithms" aria-label="Compare algorithms" onClick={() => setPanel('comparison')}><Icon name="chart" /></button><button className="icon-button glass" title="Building settings" aria-label="Building settings" onClick={() => setPanel('settings')}><Icon name="settings" /></button></div>
+      <div className="hud-tools"><button className="icon-button glass" title="Compare algorithms" aria-label="Compare algorithms" onClick={() => { workerRef.current?.postMessage({ type: 'pause' }); setRunning(false); setPanel('comparison'); }}><Icon name="chart" /></button><button className="icon-button glass" title="Building settings" aria-label="Building settings" onClick={() => setPanel('settings')}><Icon name="settings" /></button></div>
     </header>
     <section className="live-stats" aria-label="Live statistics">
       <div><strong>{Math.round(metrics.meanWait)}<small>s</small></strong><span>Avg. wait</span></div>
@@ -149,10 +179,10 @@ export function App() {
       {controller === 'pddl' ? <>
         <div className="hud-card-title"><span><i className="status-dot" /> PDDL planner</span><button className="icon-button" title="Inspect PDDL" aria-label="Inspect PDDL" onClick={() => setPanel('planner')}><Icon name="arrow" /></button></div>
         <div className="next-stop"><span>Next stop</span><strong>{sim.lastPlan?.firstStop ? floorLabel(sim.lastPlan.firstStop.floor) : '—'}</strong></div>
-        <p className="hud-caption">{sim.lastPlan ? `${sim.lastPlan.stops.length} stops · ${sim.lastPlan.cost}s planned route` : 'Waiting for a call'}</p>
+        <p className="hud-caption">{sim.lastPlan ? `${sim.lastPlan.stops.length} stops · ${sim.lastPlan.cost.toFixed(2)} estimated cost` : 'Waiting for a call'}</p>
         <button className="text-button" onClick={() => setPanel('planner')}>View plan <Icon name="arrow" /></button>
       </> : <>
-        <div className="hud-card-title"><span><i className={`status-dot ${running ? 'running' : ''}`} /> {running ? 'Learning' : 'Reinforcement learning'}</span><button className="icon-button" title="Learning settings and checkpoints" aria-label="Learning settings and checkpoints" onClick={() => setPanel('learning')}><Icon name="settings" /></button></div>
+        <div className="hud-card-title"><span><i className={`status-dot ${running ? 'running' : ''}`} /> {running ? phase : ALGORITHM_NAMES[algorithm]}</span><button className="icon-button" title="Learning settings and checkpoints" aria-label="Learning settings and checkpoints" onClick={() => setPanel('learning')}><Icon name="settings" /></button></div>
         <div className="reward-summary"><strong title="Evaluation score · higher is better">{latest ? latest.evaluation.toFixed(2) : '—'}</strong><span>{stats.episodes ? `${fmt(stats.episodes)} episodes` : 'Ready to train'}</span></div>
         <Chart points={points} selected={selectedCheckpoint} onSelect={chooseCheckpoint} />
         {latest && <div className="score-key"><span><i />Latest</span><span>Best {best?.score.toFixed(2)}</span><span>LOOK {latest.baseline.toFixed(2)}</span></div>}
@@ -160,7 +190,7 @@ export function App() {
         {best && <button className="text-button replay-best" onClick={() => chooseCheckpoint(best.episode)}>Replay best <Icon name="arrow" /></button>}
       </>}
     </aside>
-    <div className="world-info"><span className="world-status"><i className={`status-dot ${active < config.cars ? 'warning' : ''}`} />{active} of {config.cars} elevators online</span><span>{config.floors} floors · G · P1–P5</span></div>
+    <div className="world-info"><span className="world-status"><i className={`status-dot ${active < config.cars ? 'warning' : ''}`} />{active} of {config.cars} elevators online</span><span>{config.floors} floors · G · P1–P5</span>{controller === 'learned' && <span>{ALGORITHM_NAMES[qRef.current.algorithm]} · checkpoint {qVersion}</span>}</div>
     {person && <section className="passenger-card glass" aria-label="Selected passenger"><button className="icon-button" aria-label="Close passenger" onClick={() => setSelectedPerson(null)}><Icon name="close" /></button><span>{person.id === 1 && config.pattern === 'night' ? 'You' : `Passenger ${person.id + 1}`}</span><strong>{floorLabel(person.from)} <span>→</span> {floorLabel(person.to)}</strong><p>{person.delivered !== null ? 'Arrived' : person.boarded !== null ? `In elevator ${String.fromCharCode(65 + person.car!)}` : 'Waiting'} · {Math.round((person.boarded ?? sim.time) - person.arrived)}s wait</p></section>}
     <div className="playback-dock glass" role="group" aria-label="Playback controls">
       <button className="icon-button play-toggle" onClick={() => setPaused(value => !value)} title={paused ? 'Play (Space)' : 'Pause (Space)'} aria-label={paused ? 'Play simulation' : 'Pause simulation'}><Icon name={paused ? 'play' : 'pause'} /></button>
@@ -181,17 +211,31 @@ export function App() {
           <details><summary>Car specifications</summary><Range label="Capacity" value={config.capacity} min={2} max={16} onChange={capacity => change({ capacity })} /><Range label="Travel speed" value={config.speed} min={0.5} max={3} step={0.25} suffix=" fl/s" onChange={speed => change({ speed })} /><Range label="Door dwell" value={config.doors} min={2} max={10} suffix="s" onChange={doors => change({ doors })} /><label className="select-label">Seed<input aria-label="Random seed" type="number" min={1} max={999999} value={config.seed} onChange={event => { const seed = Number(event.target.value); if (Number.isInteger(seed) && seed >= 1 && seed <= 999999) change({ seed }); }} /></label></details>
           <details><summary>Follow a passenger</summary><label className="select-label">Passenger<select aria-label="Passenger to follow" value={selectedPerson ?? ''} onChange={event => { setSelectedPerson(Number(event.target.value)); setPanel(null); }}><option value="" disabled>Select a passenger</option>{sim.people.map(p => <option key={p.id} value={p.id}>{p.id === 1 && config.pattern === 'night' ? 'You' : `Passenger ${p.id + 1}`} · {floorLabel(p.from)} → {floorLabel(p.to)}</option>)}</select></label></details>
           <button className="secondary-button" onClick={() => setConfig({ ...defaults, enabled: [...defaults.enabled] })}>Restore original scenario</button><p className="field-note">Building changes reset training and replay.</p>
-          <details><summary>About the simulation</summary><p>Constant-speed travel, fixed door dwell, and no mid-flight route changes. Wait statistics include unserved passengers. This models the starting conditions of your late-night trip, not your building’s proprietary controller.</p><p>RL selects among four routing strategies using approximate state bins and duration-aware Q-learning. PDDL plans up to six known stops with classical action costs. Full temporal planning remains on the roadmap.</p><a href="https://github.com/vinny380/elevator-policy-optimization" target="_blank" rel="noreferrer">Source & methodology ↗</a></details>
+          <details><summary>About the simulation</summary><p>Constant-speed travel, fixed door dwell, and no mid-flight route changes. Wait statistics include unserved passengers. This models the starting conditions of your late-night trip, not your building’s proprietary controller.</p><p>Double DQN and PPO choose legal stops from per-floor queues and car state. Tabular Q-learning remains a strategy-selection baseline. Predictive planning samples independent future traffic. PDDL optimizes a bounded approximation of passenger costs; full temporal planning remains on the roadmap.</p><a href="https://github.com/vinny380/elevator-policy-optimization" target="_blank" rel="noreferrer">Source & methodology ↗</a></details>
         </>}
         {panel === 'learning' && <>
-          <Chart points={points} selected={selectedCheckpoint} onSelect={chooseCheckpoint} /><div className="learning-totals"><div><strong>{fmt(stats.episodes)}</strong><span>Episodes</span></div><div><strong>{fmt(stats.decisions)}</strong><span>Choices</span></div><div><strong>{fmt(stats.states)}</strong><span>States</span></div></div>
+          <Section title="Algorithm"><label className="select-label">Learner<select value={algorithm} onChange={e => setAlgorithm(e.target.value as Algorithm)}>{Object.entries(ALGORITHM_NAMES).map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>
+          {algorithm === 'ppo' && <label className="select-label">Warm start<select value={neural.pretrain} onChange={e => changeNeural({ pretrain: Number(e.target.value) })}><option value={0}>Learn from scratch</option><option value={20}>Imitate LOOK · 20 episodes</option><option value={100}>Imitate LOOK · 100 episodes</option></select></label>}
+          <label className="select-label">Training seed<input type="number" min={1} max={999999} value={neural.seed} onChange={e => { const seed = Number(e.target.value); if (Number.isInteger(seed) && seed >= 1 && seed <= 999999) changeNeural({ seed }); }} /></label>
+          <p className="field-note">Changing learner or seed starts a new run. Best policies from the last 12 runs stay in Compare until the building or reward changes.</p></Section>
+          <Chart points={points} selected={selectedCheckpoint} onSelect={chooseCheckpoint} /><div className="learning-totals"><div><strong>{fmt(stats.episodes)}</strong><span>Episodes</span></div><div><strong>{fmt(stats.decisions)}</strong><span>Choices</span></div><div><strong>{fmt(stats.states)}</strong><span>{algorithm === 'tabular' ? 'States' : 'Parameters'}</span></div></div>
           <Section title="Checkpoints"><label className="select-label">Replay<select disabled={!checkpoints.length} value={selectedCheckpoint ?? ''} onChange={event => chooseCheckpoint(Number(event.target.value))}><option value="" disabled>{checkpoints.length ? 'Select a policy' : 'Train to create checkpoints'}</option>{selectedCheckpoint !== null && !availableCheckpoints.some(c => c.episode === selectedCheckpoint) && <option value={selectedCheckpoint}>Episode {fmt(selectedCheckpoint)} · loaded</option>}{availableCheckpoints.map(c => <option value={c.episode} key={c.episode}>Episode {fmt(c.episode)} · {c.score.toFixed(2)}{c.episode === best?.episode ? ' · best' : ''}</option>)}</select></label>{best && <p className="field-note">{fmt(stats.episodes - best.episode)} episodes since the best score. {latest && best.score < latest.baseline ? 'Best still trails LOOK.' : 'Best matches or beats LOOK on evaluation seeds.'}</p>}<button className="primary-button" onClick={train}><Icon name={running ? 'pause' : 'play'} />{running ? 'Pause training' : stats.episodes ? 'Resume training' : 'Train a policy'}</button></Section>
           <Section title="Reward"><Range label="Waiting time" value={config.waitWeight} min={0} max={4} step={0.25} onChange={waitWeight => change({ waitWeight })} /><Range label="Long waits" value={config.tailWeight} min={0} max={4} step={0.25} onChange={tailWeight => change({ tailWeight })} /><Range label="Time inside car" value={config.rideWeight} min={0} max={4} step={0.25} onChange={rideWeight => change({ rideWeight })} /><p className="field-note">Reward changes start a fresh experiment.</p></Section>
-          <details><summary>Learning parameters</summary><Range label="Exploration ε" value={learning.epsilon} min={0} max={1} step={0.05} onChange={epsilon => changeLearning({ epsilon })} /><Range label="Learning rate α" value={learning.alpha} min={0.01} max={1} step={0.01} onChange={alpha => changeLearning({ alpha })} /><Range label="Discount γ" value={learning.gamma} min={0} max={1} step={0.01} onChange={gamma => changeLearning({ gamma })} hint="Per second. 1 values the entire episode equally." /></details>
-          <details><summary>How scores work</summary><p>Higher is better: negative waiting, long-wait, and ride cost per passenger. Six-minute episodes; four fixed evaluation seeds with exploration off. Best can overfit those seeds—use Compare to test separate traffic.</p><p>The graph retains 100 checkpoints plus the best-ever policy. Replay uses the building seed. Training stays in this tab; reload clears it.</p></details>
+          <details><summary>Learning parameters</summary>
+            {algorithm !== 'ppo' && <Range label="Exploration ε" value={learning.epsilon} min={0} max={1} step={0.05} onChange={epsilon => changeLearning({ epsilon })} />}
+            {algorithm === 'tabular' ? <Range label="Learning rate α" value={learning.alpha} min={0.01} max={1} step={0.01} onChange={alpha => changeLearning({ alpha })} /> : <>
+              <Range label="Learning rate" value={neural.rate} min={0.0001} max={0.003} step={0.0001} onChange={rate => changeNeural({ rate })} />
+              <label className="select-label">Batch size<select value={neural.batch} onChange={e => changeNeural({ batch: Number(e.target.value) })}>{[16, 32, 64].map(n => <option key={n}>{n}</option>)}</select></label>
+              {algorithm === 'ddqn' ? <Range label="Target sync" value={neural.targetEvery} min={10} max={500} step={10} suffix=" updates" onChange={targetEvery => changeNeural({ targetEvery })} /> : <><Range label="PPO clip" value={neural.clip} min={0.05} max={0.4} step={0.05} onChange={clip => changeNeural({ clip })} /><Range label="Entropy bonus" value={neural.entropy} min={0} max={0.1} step={0.005} onChange={entropy => changeNeural({ entropy })} /><Range label="Update epochs" value={neural.epochs} min={1} max={8} onChange={epochs => changeNeural({ epochs })} /></>}
+              <p className="field-note">{fmt(trainingDetails.updates)} optimizer updates · {trainingDetails.pretraining} imitation episodes. PPO samples its policy during training; replay uses its highest-probability legal action.</p>
+            </>}
+            <Range label="Discount γ" value={learning.gamma} min={0} max={1} step={0.01} onChange={gamma => changeLearning({ gamma })} hint="Per second. 1 values the entire episode equally." />
+          </details>
+          <details><summary>What the learner sees</summary><p>Up/down queue counts and oldest waits on every floor; each car’s position, direction, load, destinations, target, doors and service status. Waiting destinations and future arrivals are hidden. Queue counts and ages assume simulated sensors, not just physical hall buttons.</p><p>Neural policies choose a legal next stop for one ready car at a time, sharing one central network. Double DQN uses replay, a target network, and separate value/advantage outputs. PPO uses clipped policy updates, a value estimate, entropy, and duration-aware advantages. Its optional warm start imitates LOOK choices; it does not reproduce the literature’s pickup-time pretraining.</p></details>
+          <details><summary>How scores work</summary><p>Higher is better: negative waiting, long-wait, and ride cost per passenger. Six-minute episodes; four fixed evaluation seeds with exploration off. Best can overfit those seeds—use Compare to test separate traffic.</p><p>The graph retains 100 checkpoints plus the best-ever policy. Imitation episodes are included in the episode count; the cyan curve always measures the learned policy with exploration off. Replay uses the building seed. Training stays in this tab; reload clears it.</p></details>
           <button className="secondary-button" disabled={!stats.episodes} onClick={() => setConfig(prev => ({ ...prev }))}>Restart from scratch</button><p className="field-note">Clears checkpoints. Keeps your settings.</p>
         </>}
-        {panel === 'comparison' && <ComparisonPanel config={config} q={qVersion === null ? null : qRef.current} checkpoint={qVersion} onWatch={which => { replay(which); setPanel(null); }} />}
+        {panel === 'comparison' && <ComparisonPanel config={config} policies={policies} checkpoint={qVersion} onWatch={watchSaved} />}
         {panel === 'planner' && <PddlInspector plan={sim.lastPlan} fallbacks={sim.plannerFallbacks} />}
       </div>
     </dialog>

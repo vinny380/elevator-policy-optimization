@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
-    "test": "tsx --test src/engine.test.ts src/pddl.test.ts src/scene.test.ts",
-    "preview": "vite preview --host 127.0.0.1"
+    "test": "tsx --test src/*.test.ts",
+    "preview": "vite preview --host 127.0.0.1",
+    "benchmark": "tsx scripts/benchmark.ts"
   },
   "dependencies": {
     "react": "^19.3.1",
