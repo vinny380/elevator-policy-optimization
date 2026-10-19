@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Building } from './Building';
+import { Building, type SceneView } from './Building';
 import { Chart } from './Chart';
 import { ComparisonPanel } from './ComparisonPanel';
 import { PddlInspector } from './PddlInspector';
@@ -54,6 +54,7 @@ export function App() {
   const [selectedPerson, setSelectedPerson] = useState<number | null>(null);
   const [panel, setPanel] = useState<Panel | null>(null);
   const [cameraReset, setCameraReset] = useState(0);
+  const [sceneView, setSceneView] = useState<SceneView>('city');
   const workerRef = useRef<Worker | null>(null);
   const trainingStarted = useRef(false);
   const qRef = useRef<Policy>({ algorithm: 'tabular', q: {} });
@@ -159,10 +160,10 @@ export function App() {
   const person = selectedPerson === null ? null : sim.people[selectedPerson];
   const clock = `${String(Math.floor(sim.time / 60)).padStart(2, '0')}:${String(sim.time % 60).padStart(2, '0')}`;
   return <main className="game" aria-label="Elevator Policy Optimization">
-    <Building simulation={sim} onSelect={setSelectedPerson} resetToken={cameraReset} />
+    <Building simulation={sim} onSelect={setSelectedPerson} resetToken={cameraReset} view={sceneView} onView={setSceneView} />
     <div className="scene-vignette" />
     <header className="hud-header">
-      <div className="identity"><span className="identity-mark" aria-hidden="true">↑↓</span><div><h1>Elevator</h1><p>Policy optimization</p></div></div>
+      <div className="identity"><span className="identity-mark" aria-hidden="true">↑↓</span><div><h1>Toronto</h1><p>Bisha · 88 Blue Jays Way</p></div></div>
       <nav className="policy-switch glass" aria-label="Elevator controller">
         <button aria-pressed={controller === 'collective'} onClick={() => replay('collective')}>LOOK</button>
         <button aria-pressed={controller === 'learned'} onClick={() => { if (best) chooseCheckpoint(best.episode); else if (qVersion !== null) replay('learned'); else if (policies.length) watchSaved('learned', policies.at(-1)!.id); else { setPanel('learning'); setNotice('Train a policy to unlock RL playback.'); } }}>RL{!best && qVersion === null && !policies.length && <span className="untrained-dot" aria-label="Not trained" />}</button>
@@ -171,6 +172,7 @@ export function App() {
       </nav>
       <div className="hud-tools"><button className="icon-button glass" title="Compare algorithms" aria-label="Compare algorithms" onClick={() => { workerRef.current?.postMessage({ type: 'pause' }); setRunning(false); setPanel('comparison'); }}><Icon name="chart" /></button><button className="icon-button glass" title="Building settings" aria-label="Building settings" onClick={() => setPanel('settings')}><Icon name="settings" /></button></div>
     </header>
+    <nav className="location-switch glass" aria-label="Scene view"><button aria-pressed={sceneView === 'city'} onClick={() => setSceneView('city')}>Neighbourhood</button><button aria-pressed={sceneView === 'elevators'} onClick={() => setSceneView('elevators')}>Bisha elevators</button></nav>
     <section className="live-stats" aria-label="Live statistics">
       <div><strong>{Math.round(metrics.meanWait)}<small>s</small></strong><span>Avg. wait</span></div>
       <div><strong>{metrics.waiting}</strong><span>Waiting</span></div>
@@ -191,7 +193,7 @@ export function App() {
         {best && <button className="text-button replay-best" onClick={() => chooseCheckpoint(best.episode)}>Replay best <Icon name="arrow" /></button>}
       </>}
     </aside>
-    <div className="world-info"><span className="world-status"><i className={`status-dot ${active < config.cars ? 'warning' : ''}`} />{active} of {config.cars} elevators online</span><span>{config.floors} floors · G · P1–P5</span>{controller === 'learned' && <span>{ALGORITHM_NAMES[qRef.current.algorithm]} · checkpoint {qVersion}</span>}</div>
+    <div className="world-info"><span className="world-status"><i className={`status-dot ${active < config.cars ? 'warning' : ''}`} />{active} of {config.cars} elevators online</span><span>{sceneView === 'city' ? 'Entertainment District · Toronto' : `${config.floors} simulated floors · G · P1–P5`}</span>{controller === 'learned' && <span>{ALGORITHM_NAMES[qRef.current.algorithm]} · checkpoint {qVersion}</span>}</div>
     {person && <section className="passenger-card glass" aria-label="Selected passenger"><button className="icon-button" aria-label="Close passenger" onClick={() => setSelectedPerson(null)}><Icon name="close" /></button><span>{person.id === 1 && config.pattern === 'night' ? 'You' : `Passenger ${person.id + 1}`}</span><strong>{floorLabel(person.from)} <span>→</span> {floorLabel(person.to)}</strong><p>{person.delivered !== null ? 'Arrived' : person.boarded !== null ? `In elevator ${String.fromCharCode(65 + person.car!)}` : 'Waiting'} · {Math.round((person.boarded ?? sim.time) - person.arrived)}s wait</p></section>}
     <div className="playback-dock glass" role="group" aria-label="Playback controls">
       <button className="icon-button play-toggle" onClick={() => setPaused(value => !value)} title={paused ? 'Play (Space)' : 'Pause (Space)'} aria-label={paused ? 'Play simulation' : 'Pause simulation'}><Icon name={paused ? 'play' : 'pause'} /></button>
@@ -200,7 +202,7 @@ export function App() {
       <button className="icon-button" title="Restart simulation" aria-label="Restart simulation" onClick={() => replay()}><Icon name="reset" /></button>
       <button className="icon-button" title="Reset camera" aria-label="Reset camera" onClick={() => setCameraReset(value => value + 1)}><Icon name="camera" /></button>
     </div>
-    <span className="camera-hint">Drag to orbit · scroll to zoom</span>
+    <div className="map-credit"><span>{sceneView === 'city' ? 'Select Bisha to enter · drag to orbit' : 'Drag to orbit · scroll to zoom'}</span><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a><a href="/toronto/README.md" target="_blank" rel="noreferrer">Model & sources</a></div>
     <div className={`notice glass ${notice ? 'visible' : ''}`} role="status">{notice}</div>
     <dialog ref={dialog} className={`game-dialog ${panel === 'comparison' ? 'wide-dialog' : ''}`} aria-labelledby="panel-title" onCancel={() => setPanel(null)} onClick={event => { if (event.target === dialog.current) { const rect = dialog.current.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) setPanel(null); } }}>
       <header className="dialog-header"><h2 id="panel-title">{panel === 'settings' ? 'Building' : panel === 'learning' ? 'Learning' : panel === 'comparison' ? 'Compare policies' : 'PDDL plan'}</h2><button className="icon-button" autoFocus aria-label="Close panel" onClick={() => setPanel(null)}><Icon name="close" /></button></header>
@@ -212,7 +214,7 @@ export function App() {
           <details><summary>Car specifications</summary><Range label="Capacity" value={config.capacity} min={2} max={16} onChange={capacity => change({ capacity })} /><Range label="Travel speed" value={config.speed} min={0.5} max={3} step={0.25} suffix=" fl/s" onChange={speed => change({ speed })} /><Range label="Door dwell" value={config.doors} min={2} max={10} suffix="s" onChange={doors => change({ doors })} /><label className="select-label">Seed<input aria-label="Random seed" type="number" min={1} max={999999} value={config.seed} onChange={event => { const seed = Number(event.target.value); if (Number.isInteger(seed) && seed >= 1 && seed <= 999999) change({ seed }); }} /></label></details>
           <details><summary>Follow a passenger</summary><label className="select-label">Passenger<select aria-label="Passenger to follow" value={selectedPerson ?? ''} onChange={event => { setSelectedPerson(Number(event.target.value)); setPanel(null); }}><option value="" disabled>Select a passenger</option>{sim.people.map(p => <option key={p.id} value={p.id}>{p.id === 1 && config.pattern === 'night' ? 'You' : `Passenger ${p.id + 1}`} · {floorLabel(p.from)} → {floorLabel(p.to)}</option>)}</select></label></details>
           <button className="secondary-button" onClick={() => setConfig({ ...defaults, enabled: [...defaults.enabled] })}>Restore original scenario</button><p className="field-note">Building changes reset training and replay.</p>
-          <details><summary>About the simulation</summary><p>Constant-speed travel, fixed door dwell, and no mid-flight route changes. Wait statistics include unserved passengers. This models the starting conditions of your late-night trip, not your building’s proprietary controller.</p><p>Double DQN and PPO choose legal stops from per-floor queues and car state. Tabular Q-learning remains a strategy-selection baseline. Predictive planning samples independent future traffic. PDDL optimizes a bounded approximation of passenger costs; full temporal planning remains on the roadmap.</p><a href="https://github.com/vinny380/elevator-policy-optimization" target="_blank" rel="noreferrer">Source & methodology ↗</a></details>
+          <details><summary>Toronto model</summary><p>Real OpenStreetMap street and building footprints from Blue Jays Way to the CN Tower and Rogers Centre. Bisha’s glass tower, heritage podium and rooftop terrace, the CN Tower, and the stadium are modelled in 3D. Neighbouring heights use mapped heights or storey counts; missing heights are estimated.</p><p>The exterior represents the 44-storey Bisha tower. The elevator cutaway uses your configurable simulation floors and an illustrative layout, not architectural plans. This is a geographic model, not a photogrammetric scan.</p><a href="/toronto/README.md" target="_blank" rel="noreferrer">Map data, references & model assumptions ↗</a></details><details><summary>About the simulation</summary><p>Constant-speed travel, fixed door dwell, and no mid-flight route changes. Wait statistics include unserved passengers. This models the starting conditions of your late-night trip, not your building’s proprietary controller.</p><p>Double DQN and PPO choose legal stops from per-floor queues and car state. Tabular Q-learning remains a strategy-selection baseline. Predictive planning samples independent future traffic. PDDL optimizes a bounded approximation of passenger costs; full temporal planning remains on the roadmap.</p><a href="https://github.com/vinny380/elevator-policy-optimization" target="_blank" rel="noreferrer">Source & methodology ↗</a></details>
         </>}
         {panel === 'learning' && <>
           <Section title="Algorithm"><label className="select-label">Learner<select value={algorithm} onChange={e => setAlgorithm(e.target.value as Algorithm)}>{Object.entries(ALGORITHM_NAMES).map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>

@@ -229,3 +229,18 @@ tbody span { display: block; font-size: 10px; color: var(--muted); margin-top: 6
 
 .panel-notice { padding: 10px 12px; border-radius: 10px; background: #a7dfea0d; color: #bad9e3; font-size: 11px; line-height: 1.6; margin: 6px 0 16px; }
 @media (max-height: 500px) and (min-width: 641px) { .learning-hud .chart-wrap, .learning-hud .score-key, .learning-hud .replay-best { display: none; }.learning-hud .reward-summary { margin-bottom: 14px; } }
+
+/* Two spatial scales, one simulation. */
+.location-switch { position: absolute; z-index: 2; top: 185px; left: 32px; display: flex; padding: 3px; gap: 2px; border-radius: 11px; }
+.location-switch button { min-height: 34px; padding: 0 13px; border-radius: 8px; color: #9fb1c4; font-size: 11px; }
+.location-switch button[aria-pressed=true] { color: #f8dfb2; background: #f5d39912; }
+.map-credit { position: absolute; z-index: 2; bottom: 25px; right: 28px; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; font-size: 9px; color: #b3c3d3; }
+.map-credit a { color: #a4b7c8; text-decoration-color: #a4b7c844; }
+.map-status { position: absolute; z-index: 1; left: 50%; top: 50%; transform: translate(-50%, -50%); color: #c9d9e8; font-size: 13px; pointer-events: none; }
+@media (max-width: 640px) {
+  .location-switch { top: 154px; left: 16px; }
+  .location-switch button { min-height: 32px; padding: 0 10px; font-size: 10px; }
+  .map-credit { bottom: 8px; right: 12px; font-size: 8px; flex-direction: row; gap: 8px; }
+  .map-credit > span { display: none; }
+}
+@media (prefers-reduced-transparency: reduce) { .location-switch { background: #182435; backdrop-filter: none; } }

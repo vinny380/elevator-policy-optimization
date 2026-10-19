@@ -30,3 +30,20 @@ export function frameTower(camera: PerspectiveCamera, floors: number, cars: numb
   }
   return target;
 }
+
+// Geographic overview in the same scale as the Bisha elevator cutaway.
+export function frameDistrict(camera: PerspectiveCamera, width: number, height: number) {
+  const mobile = width <= 640;
+  const left = 20, right = mobile ? 20 : 300;
+  const top = Math.min(mobile ? 180 : 90, height * 0.28), bottom = Math.min(mobile ? 200 : 105, height * 0.3);
+  camera.aspect = width / height; camera.fov = mobile ? 48 : 38;
+  camera.setViewOffset(width, height, (right - left) / 2, (bottom - top) / 2, width, height); camera.updateProjectionMatrix();
+  const target = new Vector3(35, 25, 35), offset = new Vector3(-180, 190, 250);
+  const corners = [new Vector3(0, 34, 0), new Vector3(85, 117, 61), new Vector3(29, 4, 60), new Vector3(72, 22, 106), new Vector3(-70, 0, -65), new Vector3(135, 0, 135)];
+  for (let i = 0; i < 90; i++) {
+    camera.position.copy(target).add(offset); camera.lookAt(target); camera.updateMatrixWorld();
+    if (corners.every(c => { const p = c.clone().project(camera), x = (p.x + 1) * width / 2, y = (1 - p.y) * height / 2; return x >= left && x <= width - right && y >= top && y <= height - bottom; })) break;
+    offset.multiplyScalar(1.05);
+  }
+  return target;
+}

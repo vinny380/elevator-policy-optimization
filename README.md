@@ -2,6 +2,14 @@
 
 A full-screen 3D elevator laboratory. Configure up to 40 floors and five cars, change traffic and reward weights, train real policies in a worker, and replay measured checkpoints. The optimized predictive planner runs immediately, and a bundled trained PPO checkpoint is available in RL and Compare. The default recreates the starting conditions of a late-night trip: three cars, two offline, an occupied car on floor 30, and a passenger waiting at G for floor 10.
 
+## Toronto scene
+
+The default view is a geographic 3D model of the Entertainment District, anchored at **Bisha Hotel & Residences, 88 Blue Jays Way**. It extends past the **CN Tower and Rogers Centre**, including King, Wellington, Front and Bremner, the railway corridor and Roundhouse Park. Orbit, zoom and pan the district; select Bisha or use **Bisha elevators** to enter the running cutaway. **Neighbourhood** returns to the map. Camera transitions are interruptible and respect reduced motion.
+
+The bundled OpenStreetMap extract includes 993 building outlines/parts, 1,952 street/path segments, 291 railway segments, 104 park/garden polygons and 592 trees. Buildings containing mapped parts are rendered through their parts, avoiding duplicate tower volumes. Heights use OSM heights where available, then storeys × 3.3m, then a recorded 12m estimate. Street widths and facade details are illustrative. Bisha, the CN Tower and Rogers Centre have custom landmark geometry. The geographic exterior has Bisha’s 44 storeys; the elevator cutaway retains the configurable 40-floor experiment and is not an architectural lift plan.
+
+The map loads from a bundled 586 KB JSON file, without external map requests or API keys. Meshes are merged by material and trees are instanced. A failed map request leaves the elevator view usable. Map attribution remains visible; the ODbL-derived database and [sources/model assumptions](public/toronto/README.md) are shipped with the app. Refresh with `python3 scripts/import-toronto.py`; pass a downloaded OSM XML path to reproduce an extract offline.
+
 ## Run
 
 Node.js 22.12+:
