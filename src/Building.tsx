@@ -4,25 +4,22 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { floorLabel, type Simulation } from './engine';
 import { frameTower, frameDistrict } from './scene';
 import { createToronto } from './Toronto';
-import type { District } from './toronto-data';
-export type SceneView = 'city' | 'elevators';
+import { bishaPlacement, BISHA_HEIGHT, BISHA_ROTATION, MAP_SCALE, STREET_Y, type District } from './toronto-data';
 
 const CYAN = '#92e6f6';
-export function Building({ simulation, onSelect, resetToken, view, onView }: { simulation: Simulation; onSelect: (id: number) => void; resetToken: number; view: SceneView; onView: (view: SceneView) => void }) {
+export function Building({ simulation, onSelect, resetToken }: { simulation: Simulation; onSelect: (id: number) => void; resetToken: number }) {
   const host = useRef<HTMLDivElement>(null);
   const current = useRef(simulation); current.current = simulation;
   const select = useRef(onSelect); select.current = onSelect;
-  const controlsRef = useRef<OrbitControls | null>(null);
-  const viewRef = useRef(view); viewRef.current = view;
-  const changeView = useRef(onView); changeView.current = onView;
   const frameRef = useRef<((animate: boolean) => void) | null>(null);
   const [mapStatus, setMapStatus] = useState('Loading Toronto…');
   const [failed, setFailed] = useState(false);
-  useEffect(() => { frameRef.current?.(true); }, [resetToken, view]);
+  useEffect(() => { frameRef.current?.(true); }, [resetToken]);
   useEffect(() => {
     const el = host.current!;
     let renderer: THREE.WebGLRenderer;
     try { renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); } catch { setFailed(true); setMapStatus(''); return; }
+    renderer.autoClear = false;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setClearColor('#0b101a', 0);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -30,7 +27,7 @@ export function Building({ simulation, onSelect, resetToken, view, onView }: { s
     renderer.toneMappingExposure = 1.3;
     renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap; renderer.shadowMap.autoUpdate = false;
     el.appendChild(renderer.domElement);
-    renderer.domElement.setAttribute('aria-label', 'Interactive 3D Toronto: Bisha Hotel at 88 Blue Jays Way, CN Tower and Rogers Centre. Drag to rotate, scroll to zoom. Select Bisha to enter the elevator cutaway.');
+    renderer.domElement.setAttribute('aria-label', 'Interactive 3D Toronto: Bisha Hotel at 88 Blue Jays Way, CN Tower and Rogers Centre. Drag to rotate, scroll to zoom. Select Bisha or press Enter to focus its elevators. Zoom back out or press Escape to explore Toronto.');
     renderer.domElement.setAttribute('role', 'img');
     renderer.domElement.tabIndex = 0;
     const scene = new THREE.Scene();
@@ -48,7 +45,6 @@ export function Building({ simulation, onSelect, resetToken, view, onView }: { s
     controls.dampingFactor = 0.075; controls.rotateSpeed = 0.55;
     controls.minDistance = 6; controls.maxDistance = 1600; controls.maxPolarAngle = Math.PI * 0.51;
     controls.listenToKeyEvents(renderer.domElement);
-    controlsRef.current = controls;
     scene.add(new THREE.HemisphereLight('#b1cffa', '#1b243d', 2));
     const sun = new THREE.DirectionalLight('#ffe8c9', 3.5); sun.position.set(-80, 180, 80); scene.add(sun);
     sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.camera.left = -180; sun.shadow.camera.right = 180; sun.shadow.camera.top = 180; sun.shadow.camera.bottom = -180; sun.shadow.camera.far = 700; sun.shadow.normalBias = 0.2;
@@ -69,13 +65,15 @@ export function Building({ simulation, onSelect, resetToken, view, onView }: { s
     }
     const yOf = (floor: number) => (floor + 5) * 0.65 + 0.45;
     const xOf = (id: number) => -width / 2 + 2.8 + id * 1.85;
-    box(width + 7, 0.2, 10, 0, -0.8, 0, '#101b2c');
-    box(width + 5, 0.4, 8, 0, -0.45, 0, '#26334a');
-    box(width + 1.5, 0.28, 5.2, 0, -0.1, 0, '#4b5e79');
+    box(width, 0.12, 4, 0, -0.1, 0, '#4b5e79');
     box(width, height, 0.12, 0, height / 2, -1.8, '#27374e');
     for (let floor = -5; floor <= simulation.config.floors; floor++) {
       const y = yOf(floor) - 0.33;
-      box(width, 0.065, 4, 0, y, 0, floor === 0 ? '#a4b8c7' : floor < 0 ? '#465166' : '#586b83');
+      const slabColor = floor === 0 ? '#a4b8c7' : floor < 0 ? '#465166' : '#586b83';
+      // Leave the shafts open so floor plates cannot conceal moving cars.
+      box(width, 0.065, 0.35, 0, y, 1.825, slabColor);
+      box(width, 0.065, 0.8, 0, y, -1.4, slabColor);
+      box(1.65, 0.065, 3.2, -width / 2 + 0.825, y, 0, slabColor);
       box(width, 0.025, 0.035, 0, y + 0.03, 2.02, floor === 0 ? '#e9bf8a' : '#9bacc5');
       if (floor % 5 === 0 || floor === -1) label(floorLabel(floor), -width / 2 - 0.75, y + 0.28, 2.1, floor === 0 ? '#f5d8b5' : '#b9cbe0', floor === 0 ? 1.2 : 0.85);
       for (let id = 0; id < simulation.config.cars; id++) {
@@ -107,37 +105,63 @@ export function Building({ simulation, onSelect, resetToken, view, onView }: { s
     const passengerMat = new THREE.MeshStandardMaterial({ color: 'white', roughness: 0.5 }); materials.push(passengerMat);
     const passengers = new THREE.InstancedMesh(passengerGeo, passengerMat, 1200); passengers.count = 0; towerRoot.add(passengers);
     const matrix = new THREE.Object3D(); const color = new THREE.Color(); let passengerIds: number[] = [];
-    const grid = new THREE.GridHelper(120, 40, '#26364d', '#1c2b42'); grid.position.y = -0.68; towerRoot.add(grid);
+    // A depth-isolated x-ray pass reveals the real-position interior through the
+    // facade, neighbouring buildings and street over the underground parking.
+    towerRoot.traverse(object => object.layers.set(1));
+    scene.children.filter(object => object instanceof THREE.Light).forEach(light => light.layers.enable(1));
+    const interiorMaterials = materials.map(material => ({ material, opacity: material.opacity }));
+    interiorMaterials.forEach(({ material }) => { material.transparent = true; });
+    const bishaCenter = new THREE.Vector3(0, STREET_Y + BISHA_HEIGHT * MAP_SCALE / 2, 0);
+    let inspection = 0, mapFailed = false;
     let flight: { from: THREE.Vector3; to: THREE.Vector3; start: THREE.Vector3; target: THREE.Vector3; began: number } | null = null;
-    const frameView = (animate: boolean) => {
+    const frameView = (animate: boolean, focusBisha = false) => {
       const { width: w, height: h } = el.getBoundingClientRect(); if (!w || !h) return;
-      const city = viewRef.current === 'city';
-      // District distances need a tighter depth range to separate roads and roofs.
-      camera.near = city ? 5 : 0.1;
-      (scene.fog as THREE.FogExp2).density = city && w <= 640 ? 0.0007 : 0.0016;
-      towerRoot.visible = !city; district?.setCutaway(!city); renderer.shadowMap.needsUpdate = true;
       const from = camera.position.clone(), start = controls.target.clone();
-      const target = city ? frameDistrict(camera, w, h) : frameTower(camera, simulation.config.floors, simulation.config.cars, w, h);
+      towerRoot.updateMatrixWorld(true);
+      const target = focusBisha || mapFailed
+        ? frameTower(camera, simulation.config.floors, simulation.config.cars, w, h, towerRoot.matrixWorld)
+        : frameDistrict(camera, w, h);
       if (animate && !reducedMotion.matches) { flight = { from, to: camera.position.clone(), start, target, began: performance.now() }; camera.position.copy(from); }
       else { flight = null; controls.target.copy(target); controls.update(); }
-      controls.saveState();
     };
     frameRef.current = frameView;
     controls.addEventListener('start', () => { flight = null; });
-    const resize = () => { const { width: w, height: h } = el.getBoundingClientRect(); if (!w || !h) return; renderer.setSize(w, h); frameView(false); };
+    const resize = () => {
+      const { width: w, height: h } = el.getBoundingClientRect(); if (!w || !h) return;
+      renderer.setSize(w, h); frameView(false, inspection > 0.5);
+    };
     const observer = new ResizeObserver(resize); observer.observe(el); resize();
     fetch(`${import.meta.env.BASE_URL}toronto/district.json`, { signal: abort.signal })
       .then(response => { if (!response.ok) throw new Error('Map unavailable'); return response.json() as Promise<District>; })
-      .then(data => { if (disposed) return; district = createToronto(data); scene.add(district.root); renderer.shadowMap.needsUpdate = true; district.setCutaway(viewRef.current !== 'city'); setMapStatus(''); })
-      .catch(() => { if (!disposed) { setMapStatus('Toronto map unavailable. Elevator view is ready.'); changeView.current('elevators'); } });
+      .then(data => {
+        if (disposed) return;
+        district = createToronto(data); scene.add(district.root);
+        const placement = bishaPlacement(district.towerPoints, simulation.config.floors, simulation.config.cars);
+        towerRoot.position.set(...placement.position); towerRoot.scale.set(...placement.scale); towerRoot.rotation.y = BISHA_ROTATION;
+        towerRoot.updateMatrixWorld(true);
+        bishaCenter.set(towerRoot.position.x, STREET_Y + BISHA_HEIGHT * MAP_SCALE / 2, towerRoot.position.z);
+        renderer.shadowMap.needsUpdate = true; setMapStatus('');
+      })
+      .catch(() => {
+        if (!disposed) { mapFailed = true; setMapStatus('Toronto map unavailable. Elevator simulation is ready.'); frameView(false, true); }
+      });
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === 'Enter' || event.key === 'Escape') { event.preventDefault(); frameView(true, event.key === 'Enter'); }
+    };
+    renderer.domElement.addEventListener('keydown', keydown);
     const raycaster = new THREE.Raycaster(); let pointerStart = [0, 0];
     const down = (event: PointerEvent) => { pointerStart = [event.clientX, event.clientY]; };
     const click = (event: PointerEvent) => {
       if (Math.hypot(event.clientX - pointerStart[0], event.clientY - pointerStart[1]) > 5) return;
       const rect = renderer.domElement.getBoundingClientRect();
       raycaster.setFromCamera(new THREE.Vector2((event.clientX - rect.left) / rect.width * 2 - 1, -(event.clientY - rect.top) / rect.height * 2 + 1), camera);
-      if (viewRef.current === 'city') { if (district && raycaster.intersectObject(district.hit).length) changeView.current('elevators'); return; }
-      const hit = raycaster.intersectObject(passengers)[0]; if (hit?.instanceId !== undefined) select.current(passengerIds[hit.instanceId]);
+      if (inspection > 0.5) {
+        raycaster.layers.set(1);
+        const hit = raycaster.intersectObject(passengers)[0];
+        if (hit?.instanceId !== undefined) { select.current(passengerIds[hit.instanceId]); return; }
+      }
+      raycaster.layers.set(0);
+      if (district && raycaster.intersectObject(district.hit).length) frameView(true, true);
     };
     renderer.domElement.addEventListener('pointerdown', down); renderer.domElement.addEventListener('pointerup', click);
     let frame: number;
@@ -171,15 +195,28 @@ export function Building({ simulation, onSelect, resetToken, view, onView }: { s
         camera.position.lerpVectors(flight.from, flight.to, eased); controls.target.lerpVectors(flight.start, flight.target, eased);
         if (t === 1) flight = null;
       }
-      controls.update(); renderer.render(scene, camera); frame = requestAnimationFrame(render);
+      controls.update();
+      const distance = camera.position.distanceTo(bishaCenter);
+      inspection = mapFailed ? 1 : district ? 1 - THREE.MathUtils.smoothstep(distance, 75, 160) : 0;
+      district?.inspect(inspection);
+      const near = Math.max(0.1, Math.min(5, distance / 80));
+      if (Math.abs(camera.near - near) > 0.01) { camera.near = near; camera.updateProjectionMatrix(); }
+      (scene.fog as THREE.FogExp2).density = el.clientWidth <= 640 ? 0.0007 : 0.0016;
+      renderer.clear(); camera.layers.set(0); renderer.render(scene, camera);
+      if (inspection > 0.001) {
+        for (const { material, opacity } of interiorMaterials) material.opacity = opacity * inspection;
+        renderer.clearDepth(); camera.layers.set(1); renderer.render(scene, camera); camera.layers.set(0);
+      }
+      frame = requestAnimationFrame(render);
     }
     render();
     return () => {
       disposed = true; abort.abort(); district?.dispose(); frameRef.current = null;
-      cancelAnimationFrame(frame); observer.disconnect(); controls.dispose(); controlsRef.current = null;
+      cancelAnimationFrame(frame); observer.disconnect(); controls.dispose();
+      renderer.domElement.removeEventListener('keydown', keydown);
       renderer.domElement.removeEventListener('pointerdown', down); renderer.domElement.removeEventListener('pointerup', click);
       geometries.forEach(g => g.dispose()); materials.forEach(m => m.dispose()); textures.forEach(t => t.dispose());
-      grid.geometry.dispose(); (grid.material as THREE.Material).dispose(); renderer.dispose(); renderer.domElement.remove();
+      renderer.dispose(); renderer.domElement.remove();
     };
   }, [simulation.config.floors, simulation.config.cars]);
   return <div className="building-canvas" ref={host}>{mapStatus && <div className="map-status" role="status">{mapStatus}</div>}{failed && <div className="webgl-fallback">3D rendering needs WebGL. Simulation and training controls remain available.</div>}</div>;

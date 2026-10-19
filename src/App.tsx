@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Building, type SceneView } from './Building';
+import { Building } from './Building';
 import { Chart } from './Chart';
 import { ComparisonPanel } from './ComparisonPanel';
 import { PddlInspector } from './PddlInspector';
@@ -54,7 +54,6 @@ export function App() {
   const [selectedPerson, setSelectedPerson] = useState<number | null>(null);
   const [panel, setPanel] = useState<Panel | null>(null);
   const [cameraReset, setCameraReset] = useState(0);
-  const [sceneView, setSceneView] = useState<SceneView>('city');
   const workerRef = useRef<Worker | null>(null);
   const trainingStarted = useRef(false);
   const qRef = useRef<Policy>({ algorithm: 'tabular', q: {} });
@@ -160,7 +159,7 @@ export function App() {
   const person = selectedPerson === null ? null : sim.people[selectedPerson];
   const clock = `${String(Math.floor(sim.time / 60)).padStart(2, '0')}:${String(sim.time % 60).padStart(2, '0')}`;
   return <main className="game" aria-label="Elevator Policy Optimization">
-    <Building simulation={sim} onSelect={setSelectedPerson} resetToken={cameraReset} view={sceneView} onView={setSceneView} />
+    <Building simulation={sim} onSelect={setSelectedPerson} resetToken={cameraReset} />
     <div className="scene-vignette" />
     <header className="hud-header">
       <div className="identity"><span className="identity-mark" aria-hidden="true">↑↓</span><div><h1>Toronto</h1><p>Bisha · 88 Blue Jays Way</p></div></div>
@@ -172,7 +171,6 @@ export function App() {
       </nav>
       <div className="hud-tools"><button className="icon-button glass" title="Compare algorithms" aria-label="Compare algorithms" onClick={() => { workerRef.current?.postMessage({ type: 'pause' }); setRunning(false); setPanel('comparison'); }}><Icon name="chart" /></button><button className="icon-button glass" title="Building settings" aria-label="Building settings" onClick={() => setPanel('settings')}><Icon name="settings" /></button></div>
     </header>
-    <nav className="location-switch glass" aria-label="Scene view"><button aria-pressed={sceneView === 'city'} onClick={() => setSceneView('city')}>Neighbourhood</button><button aria-pressed={sceneView === 'elevators'} onClick={() => setSceneView('elevators')}>Bisha elevators</button></nav>
     <section className="live-stats" aria-label="Live statistics">
       <div><strong>{Math.round(metrics.meanWait)}<small>s</small></strong><span>Avg. wait</span></div>
       <div><strong>{metrics.waiting}</strong><span>Waiting</span></div>
@@ -193,7 +191,7 @@ export function App() {
         {best && <button className="text-button replay-best" onClick={() => chooseCheckpoint(best.episode)}>Replay best <Icon name="arrow" /></button>}
       </>}
     </aside>
-    <div className="world-info"><span className="world-status"><i className={`status-dot ${active < config.cars ? 'warning' : ''}`} />{active} of {config.cars} elevators online</span><span>{sceneView === 'city' ? 'Entertainment District · Toronto' : `${config.floors} simulated floors · G · P1–P5`}</span>{controller === 'learned' && <span>{ALGORITHM_NAMES[qRef.current.algorithm]} · checkpoint {qVersion}</span>}</div>
+    <div className="world-info"><span className="world-status"><i className={`status-dot ${active < config.cars ? 'warning' : ''}`} />{active} of {config.cars} elevators online</span><span>{config.floors} simulated floors · G · P1–P5</span>{controller === 'learned' && <span>{ALGORITHM_NAMES[qRef.current.algorithm]} · checkpoint {qVersion}</span>}</div>
     {person && <section className="passenger-card glass" aria-label="Selected passenger"><button className="icon-button" aria-label="Close passenger" onClick={() => setSelectedPerson(null)}><Icon name="close" /></button><span>{person.id === 1 && config.pattern === 'night' ? 'You' : `Passenger ${person.id + 1}`}</span><strong>{floorLabel(person.from)} <span>→</span> {floorLabel(person.to)}</strong><p>{person.delivered !== null ? 'Arrived' : person.boarded !== null ? `In elevator ${String.fromCharCode(65 + person.car!)}` : 'Waiting'} · {Math.round((person.boarded ?? sim.time) - person.arrived)}s wait</p></section>}
     <div className="playback-dock glass" role="group" aria-label="Playback controls">
       <button className="icon-button play-toggle" onClick={() => setPaused(value => !value)} title={paused ? 'Play (Space)' : 'Pause (Space)'} aria-label={paused ? 'Play simulation' : 'Pause simulation'}><Icon name={paused ? 'play' : 'pause'} /></button>
@@ -202,7 +200,7 @@ export function App() {
       <button className="icon-button" title="Restart simulation" aria-label="Restart simulation" onClick={() => replay()}><Icon name="reset" /></button>
       <button className="icon-button" title="Reset camera" aria-label="Reset camera" onClick={() => setCameraReset(value => value + 1)}><Icon name="camera" /></button>
     </div>
-    <div className="map-credit"><span>{sceneView === 'city' ? 'Select Bisha to enter · drag to orbit' : 'Drag to orbit · scroll to zoom'}</span><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a><a href="/toronto/README.md" target="_blank" rel="noreferrer">Model & sources</a></div>
+    <div className="map-credit"><span>Select Bisha to focus · scroll to explore</span><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a><a href="/toronto/README.md" target="_blank" rel="noreferrer">Model & sources</a></div>
     <div className={`notice glass ${notice ? 'visible' : ''}`} role="status">{notice}</div>
     <dialog ref={dialog} className={`game-dialog ${panel === 'comparison' ? 'wide-dialog' : ''}`} aria-labelledby="panel-title" onCancel={() => setPanel(null)} onClick={event => { if (event.target === dialog.current) { const rect = dialog.current.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) setPanel(null); } }}>
       <header className="dialog-header"><h2 id="panel-title">{panel === 'settings' ? 'Building' : panel === 'learning' ? 'Learning' : panel === 'comparison' ? 'Compare policies' : 'PDDL plan'}</h2><button className="icon-button" autoFocus aria-label="Close panel" onClick={() => setPanel(null)}><Icon name="close" /></button></header>

@@ -115,7 +115,7 @@ export function createToronto(data: District) {
   box(19, 0.4, 5, towerCenter[0] + 1, BISHA_HEIGHT + 0.65, towerCenter[1] + 8, mat('#69d4df', { emissive: '#2a8891', emissiveIntensity: 0.35 }), bisha, angle);
   box(13, 0.7, 4, 17, 4.6, 2, dark, bisha, angle);
   sign('B I S H A', 21, 9, 0, 4, '#ffe1ac', bisha, true);
-  sign('BISHA · 88 BLUE JAYS WAY', towerCenter[0], BISHA_HEIGHT + 15, towerCenter[1], 11, '#ffdb9c');
+  const bishaLabel = sign('BISHA · 88 BLUE JAYS WAY', towerCenter[0], BISHA_HEIGHT + 15, towerCenter[1], 11, '#ffdb9c');
   const ring = new T.Mesh(new T.RingGeometry(29, 30.2, 64), new T.MeshBasicMaterial({ color: '#efc98a', side: T.DoubleSide, transparent: true, opacity: 0.8 }));
   ring.rotation.x = -Math.PI / 2; ring.position.y = 1; near.add(ring); geometries.add(ring.geometry); materials.add(ring.material);
   // CN Tower: tapered concrete legs, observation pod, upper shaft and antenna.
@@ -174,8 +174,21 @@ export function createToronto(data: District) {
   }
   // Exact footprint is also the click target, even where balconies have small gaps.
   const hit = mesh(prism(tower.points, BISHA_HEIGHT + 4), new T.MeshBasicMaterial({ visible: false }), bisha); materials.add(hit.material);
-  return { root, bisha, near, labels, hit,
-    setCutaway(enabled: boolean) { root.visible = !enabled; },
+  const facadeMaterials: { material: T.Material; opacity: number }[] = [];
+  bisha.traverse(object => {
+    if (!(object instanceof T.Mesh || object instanceof T.Sprite) || object === hit) return;
+    const material = (object.material as T.Material).clone(); materials.add(material);
+    object.material = material; material.transparent = true;
+    facadeMaterials.push({ material, opacity: material.opacity });
+  });
+  return { root, hit, towerPoints: tower.points,
+    inspect(amount: number) {
+      // Only Bisha becomes translucent; the neighbourhood stays in the same scene.
+      for (const { material, opacity } of facadeMaterials) {
+        material.opacity = opacity * (1 - amount * 0.94); material.depthWrite = amount < 0.01;
+      }
+      bishaLabel.material.opacity = 1 - amount;
+    },
     dispose() { geometries.forEach(g => g.dispose()); materials.forEach(m => m.dispose()); textures.forEach(t => t.dispose()); root.removeFromParent(); },
   };
 }
