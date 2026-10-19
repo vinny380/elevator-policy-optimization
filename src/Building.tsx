@@ -52,6 +52,7 @@ export function Building({ simulation, onSelect, resetToken, view, onView }: { s
     scene.add(new THREE.HemisphereLight('#b1cffa', '#1b243d', 2));
     const sun = new THREE.DirectionalLight('#ffe8c9', 3.5); sun.position.set(-80, 180, 80); scene.add(sun);
     sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.camera.left = -180; sun.shadow.camera.right = 180; sun.shadow.camera.top = 180; sun.shadow.camera.bottom = -180; sun.shadow.camera.far = 700; sun.shadow.normalBias = 0.2;
+    sun.shadow.bias = -0.0005;
     const blue = new THREE.DirectionalLight('#7ba9e5', 2); blue.position.set(-10, 8, -12); scene.add(blue);
     const geometries: THREE.BufferGeometry[] = []; const materials: THREE.Material[] = []; const textures: THREE.Texture[] = [];
     function box(w: number, h: number, d: number, x: number, y: number, z: number, color: string, opacity = 1) {
