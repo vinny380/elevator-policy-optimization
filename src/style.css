@@ -238,7 +238,7 @@ tbody span { display: block; font-size: 10px; color: var(--muted); margin-top: 6
 .map-credit a { color: #a4b7c8; text-decoration-color: #a4b7c844; }
 .map-status { position: absolute; z-index: 1; left: 50%; top: 50%; transform: translate(-50%, -50%); color: #c9d9e8; font-size: 13px; pointer-events: none; }
 @media (max-width: 640px) {
-  .location-switch { top: 154px; left: 16px; }
+  .location-switch { top: 180px; left: 50%; transform: translateX(-50%); white-space: nowrap; }
   .location-switch button { min-height: 32px; padding: 0 10px; font-size: 10px; }
   .map-credit { bottom: 8px; right: 12px; font-size: 8px; flex-direction: row; gap: 8px; }
   .map-credit > span { display: none; }

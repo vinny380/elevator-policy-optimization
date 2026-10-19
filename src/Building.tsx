@@ -111,6 +111,7 @@ export function Building({ simulation, onSelect, resetToken, view, onView }: { s
     const frameView = (animate: boolean) => {
       const { width: w, height: h } = el.getBoundingClientRect(); if (!w || !h) return;
       const city = viewRef.current === 'city';
+      (scene.fog as THREE.FogExp2).density = city && w <= 640 ? 0.0007 : 0.0016;
       towerRoot.visible = !city; district?.setCutaway(!city); renderer.shadowMap.needsUpdate = true;
       const from = camera.position.clone(), start = controls.target.clone();
       const target = city ? frameDistrict(camera, w, h) : frameTower(camera, simulation.config.floors, simulation.config.cars, w, h);
