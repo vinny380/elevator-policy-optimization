@@ -112,6 +112,8 @@ export function Building({ simulation, onSelect, resetToken, view, onView }: { s
     const frameView = (animate: boolean) => {
       const { width: w, height: h } = el.getBoundingClientRect(); if (!w || !h) return;
       const city = viewRef.current === 'city';
+      // District distances need a tighter depth range to separate roads and roofs.
+      camera.near = city ? 5 : 0.1;
       (scene.fog as THREE.FogExp2).density = city && w <= 640 ? 0.0007 : 0.0016;
       towerRoot.visible = !city; district?.setCutaway(!city); renderer.shadowMap.needsUpdate = true;
       const from = camera.position.clone(), start = controls.target.clone();
